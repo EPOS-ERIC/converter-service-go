@@ -22,7 +22,7 @@ type HealthHandler struct {
 //	@Failure		500	{object}	HTTPError
 //	@Router			/health [get]
 func (this *HealthHandler) Health(c *gin.Context) {
-	err := health(this.RabbitConn)
+	err := health(c, this.RabbitConn)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Unhealthy: "+err.Error())
 		return
@@ -32,7 +32,7 @@ func (this *HealthHandler) Health(c *gin.Context) {
 	}
 }
 
-func health(rabbitConn *amqp.Connection) error {
+func health(c *gin.Context, rabbitConn *amqp.Connection) error {
 	// Check the rabbit connection
 	_, err := rabbitConn.Channel()
 	if err != nil {
@@ -41,10 +41,15 @@ func health(rabbitConn *amqp.Connection) error {
 	}
 
 	// Check the connection to the db
-	_, err = connection.Connect()
+	db, err := connection.Connect()
+	if err != nil {
+		return fmt.Errorf("can't connect to database")
+	}
+	err = db.Ping(c)
 	if err != nil {
 		return fmt.Errorf("can't connect to database")
 	}
 
 	return nil
 }
+
