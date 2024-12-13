@@ -1,165 +1,133 @@
 package connection
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
-	"github.com/epos-eu/converter-service/orms"
 	"github.com/go-pg/pg/v10"
 )
 
+var dbHost1 = ""
+var dbHost2 = ""
+
+// get a db to execute queries
 func Connect() (*pg.DB, error) {
-	conn := ""
+	if dbHost1 == "" && dbHost2 == "" {
+		conn, ok := os.LookupEnv("POSTGRESQL_CONNECTION_STRING")
+		if !ok {
+			return nil, fmt.Errorf("POSTGRESQL_CONNECTION_STRING is not set")
+		}
 
-	if val, res := os.LookupEnv("POSTGRESQL_CONNECTION_STRING"); res == true {
-		conn = val
-	} else {
-		return nil, fmt.Errorf("POSTGRESQL_CONNECTION_STRING is not set")
+		// Check if single host or multiple hosts
+		singleHostConn, multiHostsConns, err := parsePostgresURL(conn)
+		if err != nil {
+			return nil, err
+		}
+
+		if singleHostConn != "" {
+			dbHost1 = singleHostConn
+		} else {
+			switch len(multiHostsConns) {
+			case 0:
+				return nil, fmt.Errorf("no hosts found in connection string")
+			case 1:
+				dbHost1 = multiHostsConns[0]
+			default:
+				dbHost1 = multiHostsConns[0]
+				dbHost2 = multiHostsConns[1]
+			}
+		}
 	}
 
-	opt, err := pg.ParseURL(conn)
+	// if we only have one host, just connect directly
+	if dbHost2 == "" {
+		return connect(dbHost1)
+	}
+
+	// if we have two or more hosts try the first, if it fails try the second
+	db, err := connect(dbHost1)
 	if err != nil {
-		return nil, err
+		db, err = connect(dbHost2)
+		if err != nil {
+			return nil, err
+		}
 	}
-	db := pg.Connect(opt)
 
 	return db, nil
 }
 
-//func GetSoftwareSourceCodes() []orms.SoftwareSourceCode {
-//	db := Connect()
-//	defer db.Close()
-//	// Select all users.
-//	var listOfSoftwareSourceCodes []orms.SoftwareSourceCode
-//	err := db.Model(&listOfSoftwareSourceCodes).Where("state = ?", "PUBLISHED").Where("uid ILIKE '%' || ? || '%'", "plugin").Select()
-//	if err != nil {
-//		panic(err)
-//	}
-//	return listOfSoftwareSourceCodes
-//}
-
-//func GetSoftwareApplications() []orms.SoftwareApplication {
-//	db := Connect()
-//	defer db.Close()
-//	// Select all users.
-//	var listOfSoftwareApplications []orms.SoftwareApplication
-//	err := db.Model(&listOfSoftwareApplications).Where("state = ?", "PUBLISHED").Where("uid ILIKE '%' || ? || '%'", "plugin").Select()
-//	if err != nil {
-//		panic(err)
-//	}
-//	return listOfSoftwareApplications
-//}
-
-//func GetSoftwareApplicationsOperations() []orms.SoftwareApplicationOperation {
-//	db := Connect()
-//	defer db.Close()
-//	// Select all users.
-//	var listOfSoftwareApplicationsOperations []orms.SoftwareApplicationOperation
-//	err := db.Model(&listOfSoftwareApplicationsOperations).Select()
-//	if err != nil {
-//		panic(err)
-//	}
-//	return listOfSoftwareApplicationsOperations
-//}
-
-func GetPlugins() ([]orms.Plugin, error) {
-	db, err := Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-	// Select all users.
-	var listOfPlugins []orms.Plugin
-	err = db.Model(&listOfPlugins).Select()
-	if err != nil {
-		return nil, err
-	}
-	return listOfPlugins, nil
-}
-
-func GetPluginRelations() ([]orms.PluginRelations, error) {
-	db, err := Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-	// Select all users.
-	var listOfPluginRelations []orms.PluginRelations
-	err = db.Model(&listOfPluginRelations).Select()
-	if err != nil {
-		panic(err)
-	}
-	return listOfPluginRelations, nil
-}
-
-func GetPluginRelationsById(id string) (orms.PluginRelations, error) {
-	var plugin orms.PluginRelations
-	db, err := Connect()
-	if err != nil {
-		return plugin, err
-	}
-	defer db.Close()
-	err = db.Model(&plugin).Where("id = ?", id).Select()
-	if err != nil {
-		return plugin, err
-	}
-	return plugin, nil
-}
-
-func GetPluginRelationsByOperationId(operationId string) ([]orms.PluginRelations, error) {
-	db, err := Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	// Get the operation by id
-	var operation orms.Operation
-	err = db.Model(&operation).Where("uid = ?", operationId).Select()
+// try to connect to a db, ping it to see if it fails
+func connect(conn string) (*pg.DB, error) {
+	opt, err := pg.ParseURL(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the plugin relations by operationInstanceId
-	var listOfPluginRelations []orms.PluginRelations
-	err = db.Model(&listOfPluginRelations).Where("relation_id = ?", operation.Instance_id).Select()
+	db := pg.Connect(opt)
+	if err := db.Ping(context.Background()); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+// parsePostgresURL handles both single and multi-host URLs.
+// If it's a single host URL (no commas), it returns singleHostConn as the original URL and an empty multiHostsConns slice.
+// If it's a multi-host URL (commas in the host), it returns singleHostConn as "" and multiHostsConns as the parsed multiple host URLs.
+func parsePostgresURL(connStr string) (singleHostConn string, multiHostsConns []string, err error) {
+	parsed, err := url.Parse(connStr)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if strings.Contains(parsed.Host, ",") {
+		multiHostsConns, err := parseMultiHostPostgresURL(connStr)
+		return "", multiHostsConns, err
+	} else {
+		return connStr, nil, nil
+	}
+}
+
+// postgresql://IP1:PORT1,IP2:PORT2/cerif?user=USER&password=PASSWORD&targetServerType=master&loadBalanceHosts=true
+// to
+// postgresql://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@${PREFIX}${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRES_DB}
+// removing the extra parameters
+func parseMultiHostPostgresURL(connStr string) ([]string, error) {
+	parsed, err := url.Parse(connStr)
 	if err != nil {
 		return nil, err
 	}
-	if len(listOfPluginRelations) == 0 {
-		return nil, fmt.Errorf("eror: found 0 plugins related to OperationId: %s", operationId)
+
+	dbPath := parsed.Path
+	q := parsed.Query()
+
+	user := q.Get("user")
+	password := q.Get("password")
+
+	q.Del("user")
+	q.Del("password")
+
+	allHosts := parsed.Host
+	hosts := strings.Split(allHosts, ",")
+	if len(hosts) == 0 {
+		return nil, fmt.Errorf("no hosts found in connection string")
 	}
-	return listOfPluginRelations, nil
+
+	var results []string
+	for _, host := range hosts {
+		newURL := &url.URL{
+			Scheme: parsed.Scheme,
+			User:   url.UserPassword(user, password),
+			Host:   host,
+			Path:   dbPath,
+		}
+
+		results = append(results, newURL.String())
+	}
+
+	return results, nil
 }
 
-func GetPluginById(pluginId string) (orms.Plugin, error) {
-	var plugin orms.Plugin
-	db, err := Connect()
-	if err != nil {
-		return plugin, err
-	}
-	defer db.Close()
-	err = db.Model(&plugin).Where("id = ?", pluginId).Select()
-	if err != nil {
-		return plugin, err
-	}
-	return plugin, nil
-}
-
-func EnablePlugin(id string, enable bool) error {
-	plugin := &orms.Plugin{}
-
-	db, err := Connect()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	_, err = db.Model(plugin).
-		Set("enabled = ?", enable).
-		Where("id = ?", id).
-		Update()
-	if err != nil {
-		return err
-	}
-	return nil
-}
