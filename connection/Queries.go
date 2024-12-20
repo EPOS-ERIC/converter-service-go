@@ -11,10 +11,9 @@ func GetPlugins() ([]orms.Plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	// Select all users.
 	var listOfPlugins []orms.Plugin
-	err = db.Model(&listOfPlugins).Select()
+	err = db.Model(&listOfPlugins).Find(&listOfPlugins).Error
 	if err != nil {
 		return nil, err
 	}
@@ -26,10 +25,9 @@ func GetPluginRelations() ([]orms.PluginRelations, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	// Select all users.
 	var listOfPluginRelations []orms.PluginRelations
-	err = db.Model(&listOfPluginRelations).Select()
+	err = db.Model(&listOfPluginRelations).Find(&listOfPluginRelations).Error
 	if err != nil {
 		panic(err)
 	}
@@ -42,8 +40,7 @@ func GetPluginRelationsById(id string) (orms.PluginRelations, error) {
 	if err != nil {
 		return plugin, err
 	}
-	defer db.Close()
-	err = db.Model(&plugin).Where("id = ?", id).Select()
+	err = db.Model(&plugin).Where("id = ?", id).First(&plugin).Error
 	if err != nil {
 		return plugin, err
 	}
@@ -55,18 +52,17 @@ func GetPluginRelationsByOperationId(operationId string) ([]orms.PluginRelations
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	// Get the operation by id
 	var operation orms.Operation
-	err = db.Model(&operation).Where("uid = ?", operationId).Select()
+	err = db.Model(&operation).Where("uid = ?", operationId).First(&operation).Error
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the plugin relations by operationInstanceId
 	var listOfPluginRelations []orms.PluginRelations
-	err = db.Model(&listOfPluginRelations).Where("relation_id = ?", operation.Instance_id).Select()
+	err = db.Model(&listOfPluginRelations).Where("relation_id = ?", operation.InstanceID).Find(&listOfPluginRelations).Error
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +78,7 @@ func GetPluginById(pluginId string) (orms.Plugin, error) {
 	if err != nil {
 		return plugin, err
 	}
-	defer db.Close()
-	err = db.Model(&plugin).Where("id = ?", pluginId).Select()
+	err = db.Model(&plugin).Where("id = ?", pluginId).First(&plugin).Error
 	if err != nil {
 		return plugin, err
 	}
@@ -97,11 +92,10 @@ func EnablePlugin(id string, enable bool) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	_, err = db.Model(plugin).
-		Set("enabled = ?", enable).
+	err = db.Model(plugin).
 		Where("id = ?", id).
-		Update()
+		Update("enabled", enable).
+		Error
 	if err != nil {
 		return err
 	}
