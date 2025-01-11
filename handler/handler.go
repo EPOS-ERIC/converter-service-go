@@ -91,7 +91,7 @@ func Handler(body string) (string, error) {
 
 		return executeCommand(message.Payload, cmd)
 	default:
-		log.Printf("No evaluation available")
+		log.Printf("error: unknown runtime: %v", runtime)
 		response, err := json.Marshal("{}")
 		if err != nil {
 			return "", fmt.Errorf("error on creating json: %v", err)
