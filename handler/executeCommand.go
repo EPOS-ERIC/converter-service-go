@@ -3,11 +3,12 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/epos-eu/converter-service/loggers"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/epos-eu/converter-service/loggers"
 )
 
 func executeCommand(payload string, cmd *exec.Cmd) (string, error) {
@@ -17,18 +18,19 @@ func executeCommand(payload string, cmd *exec.Cmd) (string, error) {
 	}
 
 	// Generate random unique names for the temp input and output files
-	inputFile, outputFile, err := createTempFiles(currentDir, payload)
+	tmpDir, inputFile, outputFile, err := createTempFiles(currentDir, payload)
 	if err != nil {
 		return "", err
 	}
-	defer cleanupTempFiles(inputFile, outputFile)
+	defer cleanupTempFiles(tmpDir)
 
 	cmd.Args = append(cmd.Args, inputFile, outputFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("error executing the plugin: %w", err)
+		// log the head of the payload that could not be converted for debugging purposes
+		return "", fmt.Errorf("error executing the plugin: %w\nHead of payload: %v", err, getHead(payload, 50))
 	}
 
 	output, err := os.ReadFile(outputFile)
@@ -51,25 +53,32 @@ func executeCommand(payload string, cmd *exec.Cmd) (string, error) {
 	return string(jsonStr), nil
 }
 
-func createTempFiles(dir, payload string) (string, string, error) {
-	fileName, err := getUniqueFileName(dir)
+func createTempFiles(dir, payload string) (string, string, string, error) {
+	// get a name that is not used in the current dir
+	tmpDir, err := getUniqueFileName(dir)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	inputFile := filepath.Join(dir, "payload_"+fileName+".input")
-	outputFile := filepath.Join(dir, "payload_"+fileName+".output")
-
+	// create a temp dir with the unique name
+	err = os.Mkdir(tmpDir, os.ModeTemporary)
+	if err != nil {
+		return "", "", "", err
+	}
+	// the input and output file will be in the temp dir
+	inputFile := filepath.Join(dir, tmpDir, "input")
+	outputFile := filepath.Join(dir, tmpDir, "output")
+	// create the input file and put the payload in it
 	if err := os.WriteFile(inputFile, []byte(payload), 0644); err != nil {
-		return "", "", fmt.Errorf("error writing to temp input file: %w", err)
+		return "", "", "", fmt.Errorf("error writing to temp input file: %w", err)
 	}
 
-	return inputFile, outputFile, nil
+	return tmpDir, inputFile, outputFile, nil
 }
 
 func cleanupTempFiles(files ...string) {
 	for _, file := range files {
-		if err := os.Remove(file); err != nil {
-			loggers.EA_LOGGER.Printf("error removing temp file %s: %v\n", file, err)
+		if err := os.RemoveAll(file); err != nil {
+			loggers.EA_LOGGER.Printf("error removing temp dir: %v\n", err)
 		}
 	}
 }
@@ -94,4 +103,12 @@ func randomString(length int) string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+// getHead returns the first `length` characters of the `str` string
+func getHead(str string, length int) string {
+	if len(str) <= length {
+		return str
+	}
+	return str[:length]
 }
