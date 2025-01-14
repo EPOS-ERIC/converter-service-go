@@ -53,7 +53,7 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error getting plugin execution information. Given execution string: %v", execution)
 	}
 
-	log.Printf("Executing plugin:\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", plugin.Runtime, plugin.Id, plugin.Software_source_code_id, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
+	log.Printf("Executing plugin:\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", plugin.Runtime, plugin.Id, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
 
 	switch runtime {
 	case "Java":
@@ -70,7 +70,7 @@ func Handler(body string) (string, error) {
 			"--add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED",
 
 			"-cp",
-			"./plugins/"+plugin.Software_source_code_id+"/"+folder+jarFile,
+			"./plugins/"+plugin.SoftwareSourceCodeID+"/"+folder+jarFile,
 			method)
 
 		return executeCommand(message.Payload, cmd)
@@ -80,18 +80,18 @@ func Handler(body string) (string, error) {
 
 		// cmd := exec.Command("bash", "-c", "source", "venv/bin/activate", "&&", "python", file)
 		cmd := exec.Command("venv/bin/python", file)
-		cmd.Dir = filepath.Join("./plugins", plugin.Software_source_code_id, folder)
+		cmd.Dir = filepath.Join("./plugins", plugin.SoftwareSourceCodeID, folder)
 
 		return executeCommand(message.Payload, cmd)
 	case "Go":
 		folder := splitExecution[1]
 		executable := splitExecution[2]
 
-		cmd := exec.Command("./plugins/" + plugin.Software_source_code_id + "/" + folder + executable)
+		cmd := exec.Command("./plugins/" + plugin.SoftwareSourceCodeID + "/" + folder + executable)
 
 		return executeCommand(message.Payload, cmd)
 	default:
-		log.Printf("No evaluation available")
+		log.Printf("error: unknown runtime: %v", runtime)
 		response, err := json.Marshal("{}")
 		if err != nil {
 			return "", fmt.Errorf("error on creating json: %v", err)
@@ -111,13 +111,13 @@ func guessPluginIdUsingOriginalFormats(params Parameters) (string, error) {
 	//filter the relations using the correct request and response format
 	for _, pluginRelation := range pluginRelations {
 		if params.RequestFormat == "" {
-			if pluginRelation.Output_format == params.ResponseFormat {
-				pluginId = pluginRelation.Plugin_id
+			if pluginRelation.OutputFormat == params.ResponseFormat {
+				pluginId = pluginRelation.PluginID
 				break
 			}
 		} else {
-			if pluginRelation.Input_format == params.RequestFormat && pluginRelation.Output_format == params.ResponseFormat {
-				pluginId = pluginRelation.Plugin_id
+			if pluginRelation.InputFormat == params.RequestFormat && pluginRelation.OutputFormat == params.ResponseFormat {
+				pluginId = pluginRelation.PluginID
 				break
 			}
 		}
@@ -165,7 +165,7 @@ func guessPluginId(message *Message) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("error getting plugins relations: %v", err)
 			}
-			plugin, err := connection.GetPluginById(pluginRelations[0].Plugin_id)
+			plugin, err := connection.GetPluginById(pluginRelations[0].PluginID)
 			if err != nil {
 				return "", fmt.Errorf("error getting plugins: %v", err)
 			}
