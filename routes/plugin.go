@@ -60,7 +60,6 @@ func GetPlugin(c *gin.Context) {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		return
 	}
 	c.JSON(http.StatusOK, plugin)
 }

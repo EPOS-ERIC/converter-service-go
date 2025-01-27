@@ -1,10 +1,11 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/epos-eu/converter-service/connection"
 	"github.com/gin-gonic/gin"
 	"github.com/go-pg/pg/v10"
-	"net/http"
 )
 
 // GetAllPluginRelations Retrieve all plugins from the database
@@ -18,7 +19,7 @@ import (
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugin-relations [get]
 func GetAllPluginRelations(c *gin.Context) {
-	plugins, err := connection.GetPluginRelations()
+	plugins, err := connection.GetPluginRelation()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
@@ -45,7 +46,7 @@ func GetAllPluginRelations(c *gin.Context) {
 //	@Router			/plugin-relations/{id} [get]
 func GetPluginRelations(c *gin.Context) {
 	id := c.Param("id")
-	plugin, err := connection.GetPluginRelationsById(id)
+	plugin, err := connection.GetPluginById(id)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.AbortWithError(http.StatusNoContent, err)
@@ -54,7 +55,6 @@ func GetPluginRelations(c *gin.Context) {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		return
 	}
 	c.JSON(http.StatusOK, plugin)
 }

@@ -53,7 +53,7 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error getting plugin execution information. Given execution string: %v", execution)
 	}
 
-	log.Printf("Executing plugin:\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", plugin.Runtime, plugin.Id, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
+	log.Printf("Executing plugin:\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", plugin.Runtime, plugin.ID, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
 
 	switch runtime {
 	case "Java":
@@ -104,11 +104,11 @@ func Handler(body string) (string, error) {
 func guessPluginIdUsingOriginalFormats(params Parameters) (string, error) {
 	pluginId := ""
 
-	pluginRelations, err := connection.GetPluginRelationsByOperationId(params.OperationId)
+	pluginRelations, err := connection.GetPluginRelationByOperationId(params.OperationId)
 	if err != nil {
 		return "", fmt.Errorf("error getting plugins relations: %v", err)
 	}
-	//filter the relations using the correct request and response format
+	// filter the relations using the correct request and response format
 	for _, pluginRelation := range pluginRelations {
 		if params.RequestFormat == "" {
 			if pluginRelation.OutputFormat == params.ResponseFormat {
@@ -161,7 +161,7 @@ func guessPluginId(message *Message) (string, error) {
 			log.Printf("could not guess the puling id (#2): %v", err)
 
 			// try to use the first plugin connected with this operation id anyway (method #3)
-			pluginRelations, err := connection.GetPluginRelationsByOperationId(message.Parameters.OperationId)
+			pluginRelations, err := connection.GetPluginRelationByOperationId(message.Parameters.OperationId)
 			if err != nil {
 				return "", fmt.Errorf("error getting plugins relations: %v", err)
 			}
@@ -169,7 +169,7 @@ func guessPluginId(message *Message) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("error getting plugins: %v", err)
 			}
-			pluginId = plugin.Id
+			pluginId = plugin.ID
 		}
 	}
 

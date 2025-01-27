@@ -3,16 +3,16 @@ package connection
 import (
 	"fmt"
 
-	"github.com/epos-eu/converter-service/orms"
+	"github.com/epos-eu/converter-service/dao/model"
 )
 
-func GetPlugins() ([]orms.Plugin, error) {
+func GetPlugins() ([]model.Plugin, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
 	}
 	// Select all users.
-	var listOfPlugins []orms.Plugin
+	var listOfPlugins []model.Plugin
 	err = db.Model(&listOfPlugins).Find(&listOfPlugins).Error
 	if err != nil {
 		return nil, err
@@ -20,22 +20,22 @@ func GetPlugins() ([]orms.Plugin, error) {
 	return listOfPlugins, nil
 }
 
-func GetPluginRelations() ([]orms.PluginRelations, error) {
+func GetPluginRelation() ([]model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
 	}
 	// Select all users.
-	var listOfPluginRelations []orms.PluginRelations
-	err = db.Model(&listOfPluginRelations).Find(&listOfPluginRelations).Error
+	var listOfPluginRelation []model.PluginRelation
+	err = db.Model(&listOfPluginRelation).Find(&listOfPluginRelation).Error
 	if err != nil {
 		panic(err)
 	}
-	return listOfPluginRelations, nil
+	return listOfPluginRelation, nil
 }
 
-func GetPluginRelationsById(id string) (orms.PluginRelations, error) {
-	var plugin orms.PluginRelations
+func GetPluginRelationById(id string) (model.PluginRelation, error) {
+	var plugin model.PluginRelation
 	db, err := Connect()
 	if err != nil {
 		return plugin, err
@@ -47,33 +47,34 @@ func GetPluginRelationsById(id string) (orms.PluginRelations, error) {
 	return plugin, nil
 }
 
-func GetPluginRelationsByOperationId(operationId string) ([]orms.PluginRelations, error) {
+func GetPluginRelationByOperationId(operationId string) ([]model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the operation by id
-	var operation orms.Operation
-	err = db.Model(&operation).Where("uid = ?", operationId).First(&operation).Error
-	if err != nil {
-		return nil, err
-	}
+	// TODO: ceck if this is necessary
+	// // Get the operation by id
+	// var operation model.Operation
+	// err = db.Model(&operation).Where("uid = ?", operationId).First(&operation).Error
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Get the plugin relations by operationInstanceId
-	var listOfPluginRelations []orms.PluginRelations
-	err = db.Model(&listOfPluginRelations).Where("relation_id = ?", operation.InstanceID).Find(&listOfPluginRelations).Error
+	var listOfPluginRelation []model.PluginRelation
+	err = db.Model(&listOfPluginRelation).Where("relation_id = ?", operationId).Find(&listOfPluginRelation).Error
 	if err != nil {
 		return nil, err
 	}
-	if len(listOfPluginRelations) == 0 {
+	if len(listOfPluginRelation) == 0 {
 		return nil, fmt.Errorf("eror: found 0 plugins related to OperationId: %s", operationId)
 	}
-	return listOfPluginRelations, nil
+	return listOfPluginRelation, nil
 }
 
-func GetPluginById(pluginId string) (orms.Plugin, error) {
-	var plugin orms.Plugin
+func GetPluginById(pluginId string) (model.Plugin, error) {
+	var plugin model.Plugin
 	db, err := Connect()
 	if err != nil {
 		return plugin, err
@@ -86,7 +87,7 @@ func GetPluginById(pluginId string) (orms.Plugin, error) {
 }
 
 func EnablePlugin(id string, enable bool) error {
-	plugin := &orms.Plugin{}
+	plugin := &model.Plugin{}
 
 	db, err := Connect()
 	if err != nil {
