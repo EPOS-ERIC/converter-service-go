@@ -30,7 +30,7 @@ func executeCommand(payload string, cmd *exec.Cmd) (string, error) {
 
 	if err := cmd.Run(); err != nil {
 		// log the head of the payload that could not be converted for debugging purposes
-		return "", fmt.Errorf("error executing the plugin: %w\nHead of payload: %v", err, getHead(payload, 50))
+		return "", fmt.Errorf("error executing the plugin: %w\nHead of payload:\n%v", err, getHead(payload, 100))
 	}
 
 	output, err := os.ReadFile(outputFile)

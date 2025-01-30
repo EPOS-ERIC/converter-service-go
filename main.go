@@ -46,7 +46,7 @@ func main() {
 
 	// Initialize queues
 	externalAccessQueue := initExternalAccessQueue(ch)
-	processingServiceQueue := initProcessingServiceQueue(ch)
+	// processingServiceQueue := initProcessingServiceQueue(ch) // TODO
 	resourcesServiceQueue := initResourcesServiceQueue(ch)
 
 	// Consumers
@@ -61,16 +61,17 @@ func main() {
 	)
 	failOnError(err, "Failed to register External Access consumer")
 
-	processingServiceMsgs, err := ch.Consume(
-		processingServiceQueue.Name,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to register Processing Service consumer")
+	// TODO
+	// processingServiceMsgs, err := ch.Consume(
+	// 	processingServiceQueue.Name,
+	// 	"",
+	// 	false,
+	// 	false,
+	// 	false,
+	// 	false,
+	// 	nil,
+	// )
+	// failOnError(err, "Failed to register Processing Service consumer")
 
 	resourcesServiceMsgs, err := ch.Consume(
 		resourcesServiceQueue.Name,
@@ -85,7 +86,7 @@ func main() {
 
 	// Consume from each queue
 	go handleExternalAccessMsgs(ch, externalAccessMsgs)
-	go handleProcessingServiceMsgs(ch, processingServiceMsgs)
+	// go handleProcessingServiceMsgs(ch, processingServiceMsgs)	// TODO
 	go handleResourcesServiceMsgs(ch, resourcesServiceMsgs)
 
 	go startServer(conn)
