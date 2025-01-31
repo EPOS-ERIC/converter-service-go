@@ -1,6 +1,5 @@
-basePath: /api/converter-service/v1
 definitions:
-  orms.Plugin:
+  model.Plugin:
     properties:
       enabled:
         type: boolean
@@ -21,9 +20,13 @@ definitions:
       version:
         type: string
     type: object
-  orms.PluginRelations:
+  model.PluginRelation:
     properties:
       id:
+        type: string
+      input_format:
+        type: string
+      output_format:
         type: string
       plugin_id:
         type: string
@@ -43,8 +46,6 @@ definitions:
     type: object
 info:
   contact: {}
-  title: Converter Service API
-  version: "1.0"
 paths:
   /health:
     get:
@@ -73,7 +74,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/orms.PluginRelations'
+              $ref: '#/definitions/model.PluginRelation'
             type: array
         "204":
           description: No Content
@@ -101,7 +102,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/orms.PluginRelations'
+            $ref: '#/definitions/model.PluginRelation'
         "204":
           description: No Content
           schema:
@@ -123,7 +124,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/orms.Plugin'
+              $ref: '#/definitions/model.Plugin'
             type: array
         "204":
           description: No Content
@@ -151,7 +152,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/orms.Plugin'
+            $ref: '#/definitions/model.Plugin'
         "204":
           description: No Content
           schema:

@@ -19,7 +19,7 @@ type HTTPError struct {
 //	@Description	Retrieve all plugins from the database
 //	@Tags			plugins
 //	@Produce		json
-//	@Success		200	{array}		orms.Plugin
+//	@Success		200	{array}		model.Plugin
 //	@Failure		204	{object}	HTTPError
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugins [get]
@@ -45,7 +45,7 @@ func GetAllPlugins(c *gin.Context) {
 //	@Tags			plugins
 //	@Produce		json
 //	@Param			id	path		string	true	"Plugin ID"
-//	@Success		200	{object}	orms.Plugin
+//	@Success		200	{object}	model.Plugin
 //	@Failure		204	{object}	HTTPError
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugins/{id} [get]

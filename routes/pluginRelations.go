@@ -14,7 +14,7 @@ import (
 //	@Description	Retrieve all plugin relations from the database
 //	@Tags			plugin-relations
 //	@Produce		json
-//	@Success		200	{array}		orms.PluginRelations
+//	@Success		200	{array}		model.PluginRelation
 //	@Failure		204	{object}	HTTPError
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugin-relations [get]
@@ -40,7 +40,7 @@ func GetAllPluginRelations(c *gin.Context) {
 //	@Tags			plugin-relations
 //	@Produce		json
 //	@Param			id	path		string	true	"Plugin Relation ID"
-//	@Success		200	{object}	orms.PluginRelations
+//	@Success		200	{object}	model.PluginRelation
 //	@Failure		204	{object}	HTTPError
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugin-relations/{id} [get]

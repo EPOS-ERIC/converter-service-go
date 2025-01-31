@@ -1,11 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "Converter Service API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
-    "basePath": "/api/converter-service/v1",
     "paths": {
         "/health": {
             "get": {
@@ -49,7 +46,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/orms.PluginRelations"
+                                "$ref": "#/definitions/model.PluginRelation"
                             }
                         }
                     },
@@ -91,7 +88,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/orms.PluginRelations"
+                            "$ref": "#/definitions/model.PluginRelation"
                         }
                     },
                     "204": {
@@ -125,7 +122,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/orms.Plugin"
+                                "$ref": "#/definitions/model.Plugin"
                             }
                         }
                     },
@@ -167,7 +164,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/orms.Plugin"
+                            "$ref": "#/definitions/model.Plugin"
                         }
                     },
                     "204": {
@@ -257,7 +254,7 @@
         }
     },
     "definitions": {
-        "orms.Plugin": {
+        "model.Plugin": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -289,10 +286,16 @@
                 }
             }
         },
-        "orms.PluginRelations": {
+        "model.PluginRelation": {
             "type": "object",
             "properties": {
                 "id": {
+                    "type": "string"
+                },
+                "input_format": {
+                    "type": "string"
+                },
+                "output_format": {
                     "type": "string"
                 },
                 "plugin_id": {

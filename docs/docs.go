@@ -57,7 +57,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/orms.PluginRelations"
+                                "$ref": "#/definitions/model.PluginRelation"
                             }
                         }
                     },
@@ -99,7 +99,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/orms.PluginRelations"
+                            "$ref": "#/definitions/model.PluginRelation"
                         }
                     },
                     "204": {
@@ -133,7 +133,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/orms.Plugin"
+                                "$ref": "#/definitions/model.Plugin"
                             }
                         }
                     },
@@ -175,7 +175,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/orms.Plugin"
+                            "$ref": "#/definitions/model.Plugin"
                         }
                     },
                     "204": {
@@ -265,7 +265,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "orms.Plugin": {
+        "model.Plugin": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -297,10 +297,16 @@ const docTemplate = `{
                 }
             }
         },
-        "orms.PluginRelations": {
+        "model.PluginRelation": {
             "type": "object",
             "properties": {
                 "id": {
+                    "type": "string"
+                },
+                "input_format": {
+                    "type": "string"
+                },
+                "output_format": {
                     "type": "string"
                 },
                 "plugin_id": {
@@ -332,11 +338,11 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
-	BasePath:         "/api/converter-service/v1",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Converter Service API",
+	Title:            "",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
