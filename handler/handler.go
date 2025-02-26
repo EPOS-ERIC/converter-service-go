@@ -31,9 +31,8 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error: both the pluginId and the ResponseFormat are nil")
 	}
 
-	// If the plugin id is not specified try to infer it using the formats
 	if message.Parameters.PluginId == "" {
-		pluginId, err := guessPluginId(&message)
+		pluginId, err := guessPluginId(message.Parameters)
 		if err != nil {
 			return "", err
 		}
@@ -53,7 +52,7 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error getting plugin execution information. Given execution string: %v", execution)
 	}
 
-	log.Printf("Executing plugin:\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", plugin.Runtime, plugin.ID, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
+	log.Printf("Executing plugin:\n\tOperationId: %s\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", message.Parameters.OperationId, plugin.Runtime, plugin.Id, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
 
 	switch runtime {
 	case "Java":
@@ -130,51 +129,77 @@ func guessPluginIdUsingOriginalFormats(params Parameters) (string, error) {
 }
 
 // Try to guess the plugin id for a conversion using the parsed format of the payload
-func guessPluginIdUsingPayloadFormat(message Message) (string, error) {
-	originalRequestFormat := message.Parameters.RequestFormat
+func guessPluginIdUsingPayloadFormat(params Parameters) (string, error) {
+	originalRequestFormat := params.RequestFormat
 	parsed, err := StringToContentType(originalRequestFormat)
 	if err != nil {
 		return "", err
 	}
-	message.Parameters.RequestFormat = string(parsed)
-	pluginId, err := guessPluginIdUsingOriginalFormats(message.Parameters)
+	params.RequestFormat = string(parsed)
+	pluginId, err := guessPluginIdUsingOriginalFormats(params)
 	if err != nil {
 		return "", err
 	}
 
 	if pluginId == "" {
-		return "", fmt.Errorf("cannot infer the pluginId from the operationId and format:\nOperationId: %s\nOriginalRequestFormat: %s\nParsedRequestFormat: %s\nResponseFormat: %s\n", message.Parameters.OperationId, originalRequestFormat, message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
+		return "", fmt.Errorf("cannot infer the pluginId from the operationId and format:\nOperationId: %s\nOriginalRequestFormat: %s\nParsedRequestFormat: %s\nResponseFormat: %s\n", params.OperationId, originalRequestFormat, params.RequestFormat, params.ResponseFormat)
 	}
 	return pluginId, nil
 }
 
 // Try to guess the plugin for a conversion
-func guessPluginId(message *Message) (string, error) {
+func guessPluginId(parameters Parameters) (string, error) {
 	pluginId := ""
-	pluginId, err := guessPluginIdUsingOriginalFormats(message.Parameters)
+	pluginId, err := guessPluginIdUsingOriginalFormats(parameters)
 	if err != nil {
 		log.Printf("could not guess the puling id (#1): %v", err)
 
 		// try to guess by parsing the format of the payload
-		pluginId, err = guessPluginIdUsingPayloadFormat(*message)
+		pluginId, err = guessPluginIdUsingPayloadFormat(parameters)
 		if err != nil {
 			log.Printf("could not guess the puling id (#2): %v", err)
 
-			// try to use the first plugin connected with this operation id anyway (method #3)
-			pluginRelations, err := connection.GetPluginRelationByOperationId(message.Parameters.OperationId)
+			pluginId, err = guessPluginIdFromOutputFormat(parameters)
 			if err != nil {
-				return "", fmt.Errorf("error getting plugins relations: %v", err)
+				log.Printf("could not guess the puling id (#3): %v", err)
+
+				// try to use the first plugin connected with this operation id anyway (method #4)
+				pluginRelations, err := connection.GetPluginRelationsByOperationId(parameters.OperationId)
+				if err != nil {
+					return "", fmt.Errorf("error getting plugins relations: %v", err)
+				}
+				plugin, err := connection.GetPluginById(pluginRelations[0].PluginID)
+				if err != nil {
+					return "", fmt.Errorf("error getting plugins: %v", err)
+				}
+				pluginId = plugin.Id
 			}
-			plugin, err := connection.GetPluginById(pluginRelations[0].PluginID)
-			if err != nil {
-				return "", fmt.Errorf("error getting plugins: %v", err)
-			}
-			pluginId = plugin.ID
 		}
 	}
 
 	if pluginId == "" {
 		return "", fmt.Errorf("could not infer the pluginId for the conversion")
+	}
+	return pluginId, nil
+}
+
+func guessPluginIdFromOutputFormat(params Parameters) (string, error) {
+	pluginId := ""
+
+	pluginRelations, err := connection.GetPluginRelationsByOperationId(params.OperationId)
+	if err != nil {
+		return "", fmt.Errorf("error getting plugins relations: %v", err)
+	}
+	// find the first plugin associated with this operationId that has as output format the requested output format
+	for _, pluginRelation := range pluginRelations {
+		if pluginRelation.OutputFormat == params.ResponseFormat {
+			pluginId = pluginRelation.PluginID
+			break
+		}
+	}
+
+	if pluginId == "" {
+		return "", fmt.Errorf("could not guess pluginId from the output format: Output format: %s", params.ResponseFormat)
 	}
 	return pluginId, nil
 }
