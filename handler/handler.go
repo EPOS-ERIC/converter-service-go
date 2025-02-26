@@ -52,7 +52,7 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error getting plugin execution information. Given execution string: %v", execution)
 	}
 
-	log.Printf("Executing plugin:\n\tOperationId: %s\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", message.Parameters.OperationId, plugin.Runtime, plugin.Id, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
+	log.Printf("Executing plugin:\n\tOperationId: %s\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", message.Parameters.OperationId, plugin.Runtime, plugin.ID, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
 
 	switch runtime {
 	case "Java":
@@ -103,7 +103,7 @@ func Handler(body string) (string, error) {
 func guessPluginIdUsingOriginalFormats(params Parameters) (string, error) {
 	pluginId := ""
 
-	pluginRelations, err := connection.GetPluginRelationByOperationId(params.OperationId)
+	pluginRelations, err := connection.GetPluginRelationsByOperationId(params.OperationId)
 	if err != nil {
 		return "", fmt.Errorf("error getting plugins relations: %v", err)
 	}
@@ -172,7 +172,7 @@ func guessPluginId(parameters Parameters) (string, error) {
 				if err != nil {
 					return "", fmt.Errorf("error getting plugins: %v", err)
 				}
-				pluginId = plugin.Id
+				pluginId = plugin.ID
 			}
 		}
 	}

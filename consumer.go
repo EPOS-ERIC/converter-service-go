@@ -191,7 +191,7 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			})
 		}
 
-		loggers.RS_LOGGER.Printf("CONVERTED: %+v", responseStr)
+		// loggers.RS_LOGGER.Printf("CONVERTED: %+v", responseStr)
 
 		response, err := json.Marshal(responseStr)
 		if err != nil {

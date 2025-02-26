@@ -47,7 +47,7 @@ func GetPluginRelationById(id string) (model.PluginRelation, error) {
 	return plugin, nil
 }
 
-func GetPluginRelationByOperationId(operationId string) ([]model.PluginRelation, error) {
+func GetPluginRelationsByOperationId(operationId string) ([]model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
