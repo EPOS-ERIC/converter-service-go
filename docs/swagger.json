@@ -30,6 +30,98 @@
                 }
             }
         },
+        "/plugin": {
+            "post": {
+                "description": "Create a new plugin in the database. The plugin ID will be assigned upon creation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Create a new plugin",
+                "parameters": [
+                    {
+                        "description": "Plugin object",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Plugin"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Plugin"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/plugin-relation": {
+            "post": {
+                "description": "Create a new plugin relation in the database. The plugin relation ID will be assigned upon creation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugin-relations"
+                ],
+                "summary": "Create a new plugin relation",
+                "parameters": [
+                    {
+                        "description": "PluginRelation object",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/plugin-relations": {
             "get": {
                 "description": "Retrieve all plugin relations from the database",
@@ -104,6 +196,45 @@
                         }
                     }
                 }
+            },
+            "delete": {
+                "description": "Delete a plugin relation from the database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugin-relations"
+                ],
+                "summary": "Delete a plugin relation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
             }
         },
         "/plugins": {
@@ -141,6 +272,59 @@
                 }
             }
         },
+        "/plugins-relations/{id}": {
+            "put": {
+                "description": "Update an existing plugin relation in the database",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugin-relations"
+                ],
+                "summary": "Update a plugin relation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "PluginRelation object",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/plugins/{id}": {
             "get": {
                 "description": "Retrieve a plugin from the database",
@@ -151,6 +335,96 @@
                     "plugins"
                 ],
                 "summary": "Get a plugin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Plugin"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing plugin in the database",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Update a plugin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Plugin object",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Plugin"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Plugin"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a plugin from the database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Delete a plugin",
                 "parameters": [
                     {
                         "type": "string",

@@ -64,6 +64,68 @@ paths:
       summary: Check the health of the service
       tags:
       - health
+  /plugin:
+    post:
+      consumes:
+      - application/json
+      description: Create a new plugin in the database. The plugin ID will be assigned
+        upon creation.
+      parameters:
+      - description: Plugin object
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/model.Plugin'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Plugin'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Create a new plugin
+      tags:
+      - plugins
+  /plugin-relation:
+    post:
+      consumes:
+      - application/json
+      description: Create a new plugin relation in the database. The plugin relation
+        ID will be assigned upon creation.
+      parameters:
+      - description: PluginRelation object
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/model.PluginRelation'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.PluginRelation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Create a new plugin relation
+      tags:
+      - plugin-relations
   /plugin-relations:
     get:
       description: Retrieve all plugin relations from the database
@@ -88,6 +150,32 @@ paths:
       tags:
       - plugin-relations
   /plugin-relations/{id}:
+    delete:
+      description: Delete a plugin relation from the database
+      parameters:
+      - description: Plugin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PluginRelation'
+        "204":
+          description: No Content
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Delete a plugin relation
+      tags:
+      - plugin-relations
     get:
       description: Retrieve a plugin relation from the database
       parameters:
@@ -137,7 +225,68 @@ paths:
       summary: Get all plugins
       tags:
       - plugins
+  /plugins-relations/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing plugin relation in the database
+      parameters:
+      - description: Plugin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: PluginRelation object
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/model.PluginRelation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PluginRelation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Update a plugin relation
+      tags:
+      - plugin-relations
   /plugins/{id}:
+    delete:
+      description: Delete a plugin from the database
+      parameters:
+      - description: Plugin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Plugin'
+        "204":
+          description: No Content
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Delete a plugin
+      tags:
+      - plugins
     get:
       description: Retrieve a plugin from the database
       parameters:
@@ -162,6 +311,40 @@ paths:
           schema:
             $ref: '#/definitions/routes.HTTPError'
       summary: Get a plugin
+      tags:
+      - plugins
+    put:
+      consumes:
+      - application/json
+      description: Update an existing plugin in the database
+      parameters:
+      - description: Plugin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plugin object
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/model.Plugin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Plugin'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Update a plugin
       tags:
       - plugins
   /plugins/{id}/disable:

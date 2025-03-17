@@ -1,10 +1,14 @@
 package routes
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/epos-eu/converter-service/connection"
+	"github.com/epos-eu/converter-service/dao/model"
 	"github.com/gin-gonic/gin"
 	"github.com/go-pg/pg/v10"
-	"net/http"
+	"gorm.io/gorm"
 )
 
 // HTTPError Used just by swag
@@ -62,4 +66,90 @@ func GetPlugin(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, plugin)
+}
+
+// UpdatePlugin Update a plugin in the database
+//
+//	@Summary		Update a plugin
+//	@Description	Update an existing plugin in the database
+//	@Tags			plugins
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string			true	"Plugin ID"
+//	@Param			plugin	body		model.Plugin	true	"Plugin object"
+//	@Success		200		{object}	model.Plugin
+//	@Failure		400		{object}	HTTPError
+//	@Failure		500		{object}	HTTPError
+//	@Router			/plugins/{id} [put]
+func UpdatePlugin(c *gin.Context) {
+	id := c.Param("id")
+
+	var plugin model.Plugin
+	if err := c.ShouldBindJSON(&plugin); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	err := connection.UpdatePlugin(id, plugin)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, plugin)
+}
+
+// DeletePlugin Delete a plugin from the database
+//
+//	@Summary		Delete a plugin
+//	@Description	Delete a plugin from the database
+//	@Tags			plugins
+//	@Produce		json
+//	@Param			id	path		string	true	"Plugin ID"
+//	@Success		200	{object}	model.Plugin
+//	@Failure		204	{object}	HTTPError
+//	@Failure		500	{object}	HTTPError
+//	@Router			/plugins/{id} [delete]
+func DeletePlugin(c *gin.Context) {
+	id := c.Param("id")
+
+	deletedPlugin, err := connection.DeletePlugin(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, deletedPlugin)
+}
+
+// CreatePlugin Create a new plugin in the database
+//
+//	@Summary		Create a new plugin
+//	@Description	Create a new plugin in the database. The plugin ID will be assigned upon creation.
+//	@Tags			plugins
+//	@Accept			json
+//	@Produce		json
+//	@Param			plugin	body		model.Plugin	true	"Plugin object"
+//	@Success		201		{object}	model.Plugin
+//	@Failure		400		{object}	HTTPError
+//	@Failure		500		{object}	HTTPError
+//	@Router			/plugin [post]
+func CreatePlugin(c *gin.Context) {
+	var plugin model.Plugin
+	if err := c.ShouldBindJSON(&plugin); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	createdPlugin, err := connection.CreatePlugin(plugin)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, createdPlugin)
 }

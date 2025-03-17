@@ -21,11 +21,19 @@ func startServer(conn *amqp.Connection) {
 	// Routes
 	v1 := r.Group("/api/converter-service/v1")
 	{
+		// Plugin CRUDs
+		v1.POST("/plugin", routes.CreatePlugin)
 		v1.GET("/plugins", routes.GetAllPlugins)
 		v1.GET("/plugins/:id", routes.GetPlugin)
+		v1.PUT("/plugins/:id", routes.UpdatePlugin)
+		v1.DELETE("/plugins/:id", routes.DeletePlugin)
 
+		// Plugin Relations CRUDs
+		v1.POST("/plugin-relation", routes.CreatePluginRelation)
 		v1.GET("/plugin-relations", routes.GetAllPluginRelations)
 		v1.GET("/plugin-relations/:id", routes.GetPluginRelations)
+		v1.PUT("/plugin-relations/:id", routes.UpdatePluginRelation)
+		v1.DELETE("/plugin-relations/:id", routes.DeletePluginRelation)
 
 		// Enable and disable plugins
 		v1.POST("/plugins/:id/enable", routes.EnablePlugin)

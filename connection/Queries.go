@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/epos-eu/converter-service/dao/model"
+	"github.com/google/uuid"
 )
 
 func GetPlugins() ([]model.Plugin, error) {
@@ -101,4 +102,122 @@ func EnablePlugin(id string, enable bool) error {
 		return err
 	}
 	return nil
+}
+
+func UpdatePlugin(id string, plugin model.Plugin) error {
+	db, err := Connect()
+	if err != nil {
+		return err
+	}
+
+	// Find the existing plugin record by ID
+	var existing model.Plugin
+	err = db.First(&existing, "id = ?", id).Error
+	if err != nil {
+		return err
+	}
+
+	// Update the existing plugin record with the new data
+	err = db.Model(&existing).Updates(plugin).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeletePlugin(id string) (plugin model.Plugin, err error) {
+	db, err := Connect()
+	if err != nil {
+		return plugin, err
+	}
+
+	// Retrieve the plugin to be deleted
+	err = db.First(&plugin, "id = ?", id).Error
+	if err != nil {
+		return plugin, err
+	}
+
+	// Delete the plugin record
+	err = db.Delete(&plugin).Error
+	if err != nil {
+		return plugin, err
+	}
+
+	return plugin, nil
+}
+
+func CreatePlugin(plugin model.Plugin) (model.Plugin, error) {
+	db, err := Connect()
+	if err != nil {
+		return plugin, err
+	}
+
+	// Generate an id for the plugin
+	plugin.ID = uuid.New().String()
+	err = db.Create(&plugin).Error
+	if err != nil {
+		return plugin, err
+	}
+
+	return plugin, nil
+}
+
+func UpdatePluginRelation(id string, relation model.PluginRelation) error {
+	db, err := Connect()
+	if err != nil {
+		return err
+	}
+
+	// Find the existing plugin record by ID
+	var existing model.Plugin
+	err = db.First(&existing, "id = ?", id).Error
+	if err != nil {
+		return err
+	}
+
+	// Update the existing plugin record with the new data
+	err = db.Model(&existing).Updates(relation).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeletePluginRelation(id string) (relation model.PluginRelation, err error) {
+	db, err := Connect()
+	if err != nil {
+		return relation, err
+	}
+
+	// Retrieve the plugin to be deleted
+	err = db.First(&relation, "id = ?", id).Error
+	if err != nil {
+		return relation, err
+	}
+
+	// Delete the plugin record
+	err = db.Delete(&relation).Error
+	if err != nil {
+		return relation, err
+	}
+
+	return relation, nil
+}
+
+func CreatePluginRelation(relation model.PluginRelation) (model.PluginRelation, error) {
+	db, err := Connect()
+	if err != nil {
+		return relation, err
+	}
+
+	// Generate an id for the plugin
+	relation.ID = uuid.New().String()
+	err = db.Create(&relation).Error
+	if err != nil {
+		return relation, err
+	}
+
+	return relation, nil
 }

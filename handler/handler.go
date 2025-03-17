@@ -142,7 +142,7 @@ func guessPluginIdUsingPayloadFormat(params Parameters) (string, error) {
 	}
 
 	if pluginId == "" {
-		return "", fmt.Errorf("cannot infer the pluginId from the operationId and format:\nOperationId: %s\nOriginalRequestFormat: %s\nParsedRequestFormat: %s\nResponseFormat: %s\n", params.OperationId, originalRequestFormat, params.RequestFormat, params.ResponseFormat)
+		return "", fmt.Errorf("cannot infer the pluginId from the operationId and format:\nOperationId: %s\nOriginalRequestFormat: %s\nParsedRequestFormat: %s\nResponseFormat: %s", params.OperationId, originalRequestFormat, params.RequestFormat, params.ResponseFormat)
 	}
 	return pluginId, nil
 }

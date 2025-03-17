@@ -13,9 +13,6 @@ import (
 )
 
 func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	for m := range msgs {
 		loggers.EA_LOGGER.Println("Received message")
 		newRouting := strings.Split(m.RoutingKey, ".")
@@ -25,7 +22,7 @@ func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		response, err := handler.Handler(string(m.Body))
 		if err != nil {
 			loggers.EA_LOGGER.Printf("Failed to convert the message: %v\n", err)
-			err := publishError(ch, ctx, "externalAccess", routingReturn, m, err)
+			err := publishError(ch, "externalAccess", routingReturn, m, err)
 			if err != nil {
 				loggers.EA_LOGGER.Printf("Failed to publish the error message: %v\n", err)
 			}
@@ -40,8 +37,7 @@ func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		}
 
 		loggers.EA_LOGGER.Println("Sending converted message")
-		err = ch.PublishWithContext(
-			ctx,
+		err = ch.Publish(
 			"externalAccess",
 			routingReturn,
 			false,
@@ -138,7 +134,7 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		err := json.Unmarshal(m.Body, &resourcesMsg)
 		if err != nil || resourcesMsg.Plugins != "all" {
 			loggers.RS_LOGGER.Printf("Failed to process the message: %v\n", err)
-			err := publishError(ch, ctx, "metadataService", routingReturn, m, err)
+			err := publishError(ch, "metadataService", routingReturn, m, err)
 			if err != nil {
 				loggers.RS_LOGGER.Printf("Failed to publish the error message: %v\n", err)
 			}
@@ -156,7 +152,7 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		relations, err := connection.GetPluginRelation()
 		if err != nil {
 			loggers.RS_LOGGER.Printf("Failed to unmarshal the message: %v\n", err)
-			err := publishError(ch, ctx, "metadataService", routingReturn, m, err)
+			err := publishError(ch, "metadataService", routingReturn, m, err)
 			if err != nil {
 				loggers.RS_LOGGER.Printf("Failed to publish the error message: %v\n", err)
 			}
@@ -196,7 +192,7 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		response, err := json.Marshal(responseStr)
 		if err != nil {
 			loggers.RS_LOGGER.Printf("Failed to process the message: %v\n", err)
-			err := publishError(ch, ctx, "metadataService", routingReturn, m, err)
+			err := publishError(ch, "metadataService", routingReturn, m, err)
 			if err != nil {
 				loggers.RS_LOGGER.Printf("Failed to publish the error message: %v\n", err)
 			}
@@ -245,9 +241,8 @@ func buildRoutingKey(sections []string, suffix string) string {
 	return strings.Join(sections[:len(sections)-1], ".") + "." + suffix
 }
 
-func publishError(ch *amqp.Channel, ctx context.Context, exchange, routingKey string, d amqp.Delivery, err error) error {
-	return ch.PublishWithContext(
-		ctx,
+func publishError(ch *amqp.Channel, exchange, routingKey string, d amqp.Delivery, err error) error {
+	return ch.Publish(
 		exchange,
 		routingKey,
 		false,
