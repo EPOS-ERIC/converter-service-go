@@ -6,7 +6,6 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/epos-eu/converter-service/connection"
 )
@@ -44,24 +43,10 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error getting plugins: %v", err)
 	}
 
-	runtime := plugin.Runtime
-	execution := plugin.Execution
+	log.Printf("Executing plugin: %+v", plugin)
 
-	splitExecution := strings.Split(execution, ";")
-	if len(splitExecution) < 3 {
-		return "", fmt.Errorf("error getting plugin execution information. Given execution string: %v", execution)
-	}
-
-	log.Printf("Executing plugin:\n\tOperationId: %s\n\tRuntime: %s\n\tPluginId: %s\n\tSoftwareSourceCodeId: %s\n\tPluginFile: %s\n\tInputFormat: %s\n\tOutputFormat: %s", message.Parameters.OperationId, plugin.Runtime, plugin.ID, plugin.SoftwareSourceCodeID, splitExecution[2], message.Parameters.RequestFormat, message.Parameters.ResponseFormat)
-
-	switch runtime {
-	case "Java":
-		if len(splitExecution) < 4 {
-			return "", fmt.Errorf("wrong number of arguments in Java execution string: %s", execution)
-		}
-		folder := splitExecution[1]
-		jarFile := splitExecution[2]
-		method := splitExecution[3]
+	switch plugin.Runtime {
+	case "java":
 
 		cmd := exec.Command("java",
 			// Options needed for the EPOS-GEO-JSON library
@@ -69,28 +54,21 @@ func Handler(body string) (string, error) {
 			"--add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED",
 
 			"-cp",
-			"./plugins/"+plugin.SoftwareSourceCodeID+"/"+folder+jarFile,
-			method)
+			"./plugins/"+plugin.ID+"/"+plugin.Executable,
+			plugin.Arguments)
 
 		return executeCommand(message.Payload, cmd)
-	case "Python":
-		folder := splitExecution[1]
-		file := splitExecution[2]
-
-		// cmd := exec.Command("bash", "-c", "source", "venv/bin/activate", "&&", "python", file)
-		cmd := exec.Command("venv/bin/python", file)
-		cmd.Dir = filepath.Join("./plugins", plugin.SoftwareSourceCodeID, folder)
+	case "python":
+		cmd := exec.Command("venv/bin/python", plugin.Executable)
+		cmd.Dir = filepath.Join("./plugins", plugin.ID)
 
 		return executeCommand(message.Payload, cmd)
-	case "Go":
-		folder := splitExecution[1]
-		executable := splitExecution[2]
-
-		cmd := exec.Command("./plugins/" + plugin.SoftwareSourceCodeID + "/" + folder + executable)
+	case "go":
+		cmd := exec.Command("./plugins/" + plugin.ID + "/" + plugin.Executable)
 
 		return executeCommand(message.Payload, cmd)
 	default:
-		log.Printf("error: unknown runtime: %v", runtime)
+		log.Printf("error: unknown runtime: %v", plugin.Runtime)
 		response, err := json.Marshal("{}")
 		if err != nil {
 			return "", fmt.Errorf("error on creating json: %v", err)

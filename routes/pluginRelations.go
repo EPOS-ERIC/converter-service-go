@@ -8,6 +8,7 @@ import (
 	"github.com/epos-eu/converter-service/dao/model"
 	"github.com/gin-gonic/gin"
 	"github.com/go-pg/pg/v10"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -135,13 +136,27 @@ func DeletePluginRelation(c *gin.Context) {
 func CreatePluginRelation(c *gin.Context) {
 	var relation model.PluginRelation
 	if err := c.ShouldBindJSON(&relation); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Generate an id for the plugin
+	relation.ID = uuid.New().String()
+
+	// if the relation type is empty assume we are talking about operations
+	if relation.RelationType == "" {
+		relation.RelationType = "operation"
+	}
+
+	err := relation.Validate()
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	createdPlugin, err := connection.CreatePluginRelation(relation)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 

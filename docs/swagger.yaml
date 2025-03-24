@@ -1,23 +1,34 @@
 definitions:
   model.Plugin:
     properties:
+      arguments:
+        description: arguments for the execution (if needed (like the main java class
+          name))
+        type: string
       enabled:
+        description: if the plugin is enabled aka if it can be used
         type: boolean
-      execution:
+      executable:
+        description: the path for the executable
         type: string
       id:
+        description: the id of the plugin (generated when the plugin is created)
         type: string
       installed:
+        description: if the plugin is currently installed
         type: boolean
-      proxy_type:
+      repository:
+        description: the url from which to clone the repository
         type: string
       runtime:
-        type: string
-      software_application_id:
-        type: string
-      software_source_code_id:
+        description: the runtime (binary, java, python, ...)
         type: string
       version:
+        description: the name of the branch if version_type is branch or the tag number
+          if it is tag
+        type: string
+      version_type:
+        description: either 'branch' or 'tag'
         type: string
     type: object
   model.PluginRelation:

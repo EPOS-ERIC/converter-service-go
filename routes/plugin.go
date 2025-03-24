@@ -3,13 +3,18 @@ package routes
 import (
 	"errors"
 	"net/http"
+	"os"
+	"path"
 
 	"github.com/epos-eu/converter-service/connection"
 	"github.com/epos-eu/converter-service/dao/model"
 	"github.com/gin-gonic/gin"
 	"github.com/go-pg/pg/v10"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+const PluginsPath = "./plugins/"
 
 // HTTPError Used just by swag
 type HTTPError struct {
@@ -113,13 +118,28 @@ func UpdatePlugin(c *gin.Context) {
 func DeletePlugin(c *gin.Context) {
 	id := c.Param("id")
 
+	// delete the plugin from the db
 	deletedPlugin, err := connection.DeletePlugin(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.AbortWithStatus(http.StatusNoContent)
+			c.Status(http.StatusNotFound)
 			return
 		}
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// delete the plugin directory
+	err = os.RemoveAll(path.Join(PluginsPath, deletedPlugin.ID))
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Error cleaning plugin directory %s: %w", deletedPlugin.ID, err)
+		return
+	}
+
+	// delete the relations related to this plugin
+	err = connection.DeletePluginRelationsForPlugin(deletedPlugin.ID)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Error deleting plugin relations related to plugin %w", err)
 		return
 	}
 
@@ -141,13 +161,26 @@ func DeletePlugin(c *gin.Context) {
 func CreatePlugin(c *gin.Context) {
 	var plugin model.Plugin
 	if err := c.ShouldBindJSON(&plugin); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Generate an id for the plugin
+	plugin.ID = uuid.New().String()
+	// By default the plugin is not installed (it will be when the routine installs it)
+	plugin.Installed = false
+	// plugin.Runtime = strings.ToLower(plugin.Runtime)
+
+	// Make sure that the plugin given in the post is valid
+	err := plugin.Validate()
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	createdPlugin, err := connection.CreatePlugin(plugin)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 

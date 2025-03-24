@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/epos-eu/converter-service/dao/model"
-	"github.com/google/uuid"
 )
 
 func GetPlugins() ([]model.Plugin, error) {
@@ -153,8 +152,6 @@ func CreatePlugin(plugin model.Plugin) (model.Plugin, error) {
 		return plugin, err
 	}
 
-	// Generate an id for the plugin
-	plugin.ID = uuid.New().String()
 	err = db.Create(&plugin).Error
 	if err != nil {
 		return plugin, err
@@ -191,13 +188,11 @@ func DeletePluginRelation(id string) (relation model.PluginRelation, err error) 
 		return relation, err
 	}
 
-	// Retrieve the plugin to be deleted
 	err = db.First(&relation, "id = ?", id).Error
 	if err != nil {
 		return relation, err
 	}
 
-	// Delete the plugin record
 	err = db.Delete(&relation).Error
 	if err != nil {
 		return relation, err
@@ -212,12 +207,25 @@ func CreatePluginRelation(relation model.PluginRelation) (model.PluginRelation, 
 		return relation, err
 	}
 
-	// Generate an id for the plugin
-	relation.ID = uuid.New().String()
 	err = db.Create(&relation).Error
 	if err != nil {
 		return relation, err
 	}
 
 	return relation, nil
+}
+
+func DeletePluginRelationsForPlugin(id string) error {
+	db, err := Connect()
+	if err != nil {
+		return err
+	}
+
+	// Delete all plugin relations that reference the given plugin id.
+	err = db.Where("plugin_id = ?", id).Delete(&model.PluginRelation{}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
