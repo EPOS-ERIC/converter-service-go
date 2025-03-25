@@ -61,6 +61,6 @@ func startServer(conn *amqp.Connection) {
 
 	err := r.Run(":8080")
 	if err != nil {
-		loggers.API_LOGGER.Printf("ERROR: %v", err)
+		loggers.API_LOGGER.Error("Error initializing server", "error", err)
 	}
 }
