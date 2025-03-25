@@ -35,12 +35,12 @@ type HTTPError struct {
 func GetAllPlugins(c *gin.Context) {
 	plugins, err := connection.GetPlugins()
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if len(plugins) == 0 {
-		c.AbortWithError(http.StatusNoContent, err)
+		c.String(http.StatusNoContent, "No plugins found")
 		return
 	}
 
@@ -63,10 +63,10 @@ func GetPlugin(c *gin.Context) {
 	plugin, err := connection.GetPluginById(id)
 	if err != nil {
 		if err == pg.ErrNoRows {
-			c.AbortWithError(http.StatusNoContent, err)
+			c.String(http.StatusNoContent, err.Error())
 			return
 		} else {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
@@ -91,13 +91,13 @@ func UpdatePlugin(c *gin.Context) {
 
 	var plugin model.Plugin
 	if err := c.ShouldBindJSON(&plugin); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	err := connection.UpdatePlugin(id, plugin)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 

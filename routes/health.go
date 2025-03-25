@@ -2,10 +2,11 @@ package routes
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/epos-eu/converter-service/connection"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"net/http"
 )
 
 type HealthHandler struct {
@@ -21,10 +22,10 @@ type HealthHandler struct {
 //	@Success		200	{string}	string	"Healthy"
 //	@Failure		500	{object}	HTTPError
 //	@Router			/health [get]
-func (this *HealthHandler) Health(c *gin.Context) {
-	err := health(this.RabbitConn)
+func (h *HealthHandler) Health(c *gin.Context) {
+	err := health(h.RabbitConn)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Unhealthy: "+err.Error())
+		c.String(http.StatusInternalServerError, "Unhealthy: %w", err)
 		return
 	} else {
 		c.String(http.StatusOK, "Healthy")

@@ -167,7 +167,7 @@ func UpdatePluginRelation(id string, relation model.PluginRelation) error {
 	}
 
 	// Find the existing plugin record by ID
-	var existing model.Plugin
+	var existing model.PluginRelation
 	err = db.First(&existing, "id = ?", id).Error
 	if err != nil {
 		return err

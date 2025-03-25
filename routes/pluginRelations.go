@@ -25,12 +25,12 @@ import (
 func GetAllPluginRelations(c *gin.Context) {
 	plugins, err := connection.GetPluginRelation()
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if len(plugins) == 0 {
-		c.AbortWithError(http.StatusNoContent, err)
+		c.String(http.StatusNoContent, "No plugin relation found")
 		return
 	}
 
@@ -53,10 +53,10 @@ func GetPluginRelations(c *gin.Context) {
 	plugin, err := connection.GetPluginById(id)
 	if err != nil {
 		if err == pg.ErrNoRows {
-			c.AbortWithError(http.StatusNoContent, err)
+			c.String(http.StatusNoContent, "No plugin found with id: %s", id)
 			return
 		} else {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
@@ -81,13 +81,23 @@ func UpdatePluginRelation(c *gin.Context) {
 
 	var relation model.PluginRelation
 	if err := c.ShouldBindJSON(&relation); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	err := connection.UpdatePluginRelation(id, relation)
+	// make sure the id of the relation is correct (do not allow users to change it)
+	relation.ID = id
+
+	// to update just one attribute of the pluginRelation, the whole relation (as json) must be passed in the body of the request, otherwise the validation will not work
+	err := relation.Validate()
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err = connection.UpdatePluginRelation(id, relation)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -114,7 +124,7 @@ func DeletePluginRelation(c *gin.Context) {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 

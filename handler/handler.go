@@ -63,7 +63,7 @@ func Handler(body string) (string, error) {
 		cmd.Dir = filepath.Join("./plugins", plugin.ID)
 
 		return executeCommand(message.Payload, cmd)
-	case "go":
+	case "go", "binary":
 		cmd := exec.Command("./plugins/" + plugin.ID + "/" + plugin.Executable)
 
 		return executeCommand(message.Payload, cmd)
