@@ -108,8 +108,8 @@ type Relation struct {
 }
 
 type Plugin struct {
-	OperationID string     `json:"operationId"`
-	Relations   []Relation `json:"relations"`
+	DistributionID string     `json:"distributionId"`
+	Relations      []Relation `json:"relations"`
 }
 
 type PluginRelation []Plugin
@@ -145,7 +145,7 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		}
 
 		// get all plugin relations
-		relations, err := connection.GetPluginRelation()
+		relations, err := connection.GetPluginRelationForEnabledPlugins()
 		if err != nil {
 			loggers.RS_LOGGER.Error("Failed to get plugin relations", "error", err)
 			err := publishError(ch, "metadataService", routingReturn, m, err)
@@ -173,8 +173,8 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		responseStr := make([]Plugin, 0)
 		for k, v := range operations {
 			responseStr = append(responseStr, Plugin{
-				OperationID: k,
-				Relations:   v,
+				DistributionID: k,
+				Relations:      v,
 			})
 		}
 
@@ -194,7 +194,7 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		loggers.RS_LOGGER.Debug("Sending converted message", "message", response)
+		// loggers.RS_LOGGER.Debug("Sending converted message", "message", response)
 		err = ch.PublishWithContext(
 			ctx,
 			"metadataService",

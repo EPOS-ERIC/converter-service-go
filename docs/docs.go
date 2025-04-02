@@ -41,39 +41,28 @@ const docTemplate = `{
                 }
             }
         },
-        "/plugin": {
-            "post": {
-                "description": "Create a new plugin in the database. The plugin ID will be assigned upon creation.",
-                "consumes": [
-                    "application/json"
-                ],
+        "/plugin-relations": {
+            "get": {
+                "description": "Retrieve all plugin relations from the database",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "plugins"
+                    "plugin-relations"
                 ],
-                "summary": "Create a new plugin",
-                "parameters": [
-                    {
-                        "description": "Plugin object",
-                        "name": "plugin",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.Plugin"
-                        }
-                    }
-                ],
+                "summary": "Get all plugin relations",
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Plugin"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.PluginRelation"
+                            }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/routes.HTTPError"
                         }
@@ -85,9 +74,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/plugin-relation": {
+            },
             "post": {
                 "description": "Create a new plugin relation in the database. The plugin relation ID will be assigned upon creation.",
                 "consumes": [
@@ -133,41 +120,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/plugin-relations": {
-            "get": {
-                "description": "Retrieve all plugin relations from the database",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "plugin-relations"
-                ],
-                "summary": "Get all plugin relations",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.PluginRelation"
-                            }
-                        }
-                    },
-                    "204": {
-                        "description": "No Content",
-                        "schema": {
-                            "$ref": "#/definitions/routes.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/routes.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
         "/plugin-relations/{id}": {
             "get": {
                 "description": "Retrieve a plugin relation from the database",
@@ -194,8 +146,59 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.PluginRelation"
                         }
                     },
-                    "204": {
-                        "description": "No Content",
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/routes.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing plugin relation in the database. Even if explicitly passed in the body, the Id of the plugin relation will not be changed",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugin-relations"
+                ],
+                "summary": "Update a plugin relation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin Relation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "PluginRelation object",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PluginRelation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/routes.HTTPError"
                         }
@@ -220,7 +223,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Plugin ID",
+                        "description": "Plugin Relation ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -233,8 +236,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.PluginRelation"
                         }
                     },
-                    "204": {
-                        "description": "No Content",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/routes.HTTPError"
                         }
@@ -268,8 +271,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "204": {
-                        "description": "No Content",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/routes.HTTPError"
                         }
@@ -281,11 +284,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/plugins-relations/{id}": {
-            "put": {
-                "description": "Update an existing plugin relation in the database",
+            },
+            "post": {
+                "description": "Create a new plugin in the database. The plugin ID will be assigned upon creation.",
                 "consumes": [
                     "application/json"
                 ],
@@ -293,32 +294,25 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "plugin-relations"
+                    "plugins"
                 ],
-                "summary": "Update a plugin relation",
+                "summary": "Create a new plugin",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Plugin ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "PluginRelation object",
+                        "description": "Plugin object",
                         "name": "plugin",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.PluginRelation"
+                            "$ref": "#/definitions/model.Plugin"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.PluginRelation"
+                            "$ref": "#/definitions/model.Plugin"
                         }
                     },
                     "400": {
@@ -362,8 +356,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.Plugin"
                         }
                     },
-                    "204": {
-                        "description": "No Content",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/routes.HTTPError"
                         }
@@ -377,7 +371,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update an existing plugin in the database",
+                "description": "Update an existing plugin in the database. Even if explicitly passed in the body, the Id of the plugin will not be changed",
                 "consumes": [
                     "application/json"
                 ],
@@ -452,8 +446,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.Plugin"
                         }
                     },
-                    "204": {
-                        "description": "No Content",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/routes.HTTPError"
                         }
@@ -546,6 +540,10 @@ const docTemplate = `{
                     "description": "arguments for the execution (if needed (like the main java class name))",
                     "type": "string"
                 },
+                "description": {
+                    "description": "a description of the plugin",
+                    "type": "string"
+                },
                 "enabled": {
                     "description": "if the plugin is enabled aka if it can be used",
                     "type": "boolean"
@@ -562,13 +560,21 @@ const docTemplate = `{
                     "description": "if the plugin is currently installed",
                     "type": "boolean"
                 },
+                "name": {
+                    "description": "the name of the plugin",
+                    "type": "string"
+                },
                 "repository": {
                     "description": "the url from which to clone the repository",
                     "type": "string"
                 },
                 "runtime": {
                     "description": "the runtime (binary, java, python, ...)",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.SupportedRuntimes"
+                        }
+                    ]
                 },
                 "version": {
                     "description": "the name of the branch if version_type is branch or the tag number if it is tag",
@@ -576,7 +582,11 @@ const docTemplate = `{
                 },
                 "version_type": {
                     "description": "either 'branch' or 'tag'",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.VersionType"
+                        }
+                    ]
                 }
             }
         },
@@ -584,24 +594,50 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
+                    "description": "the id of the relation (generated when the relation is created)",
                     "type": "string"
                 },
                 "input_format": {
+                    "description": "the file format expected by the plugin for the input",
                     "type": "string"
                 },
                 "output_format": {
+                    "description": "the file format expected as the output from the plugin execution",
                     "type": "string"
                 },
                 "plugin_id": {
+                    "description": "the id of the plugin (from the plugin table)",
                     "type": "string"
                 },
                 "relation_id": {
-                    "type": "string"
-                },
-                "relation_type": {
+                    "description": "the instanceId of the distribution",
                     "type": "string"
                 }
             }
+        },
+        "model.SupportedRuntimes": {
+            "type": "string",
+            "enum": [
+                "binary",
+                "java",
+                "python"
+            ],
+            "x-enum-varnames": [
+                "SupportedRuntimesBinary",
+                "SupportedRuntimesJava",
+                "SupportedRuntimesPython"
+            ]
+        },
+        "model.VersionType": {
+            "type": "string",
+            "enum": [
+                "branch",
+                "tag"
+            ],
+            "x-enum-varnames": [
+                "VersionTypeBranch",
+                "VersionTypeTag"
+            ]
         },
         "routes.HTTPError": {
             "type": "object",

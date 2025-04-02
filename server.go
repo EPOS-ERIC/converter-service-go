@@ -13,7 +13,7 @@ import (
 )
 
 // startServer initializes the Gin engine and starts listening on :8080.
-// The RabbitMQ connection is passed for health checks
+// The RabbitMQ connection is passed for health checks.
 func startServer(conn *amqp.Connection) {
 	r := gin.Default()
 	docs.SwaggerInfo.BasePath = "/api/converter-service/v1"
@@ -21,17 +21,17 @@ func startServer(conn *amqp.Connection) {
 	// Routes
 	v1 := r.Group("/api/converter-service/v1")
 	{
-		// Plugin CRUDs
-		v1.POST("/plugin", routes.CreatePlugin)
+		// Plugin CRUD endpoints with consistent naming
+		v1.POST("/plugins", routes.CreatePlugin)
 		v1.GET("/plugins", routes.GetAllPlugins)
 		v1.GET("/plugins/:id", routes.GetPlugin)
 		v1.PUT("/plugins/:id", routes.UpdatePlugin)
 		v1.DELETE("/plugins/:id", routes.DeletePlugin)
 
-		// Plugin Relations CRUDs
-		v1.POST("/plugin-relation", routes.CreatePluginRelation)
+		// Plugin Relations CRUD endpoints
+		v1.POST("/plugin-relations", routes.CreatePluginRelation)
 		v1.GET("/plugin-relations", routes.GetAllPluginRelations)
-		v1.GET("/plugin-relations/:id", routes.GetPluginRelations)
+		v1.GET("/plugin-relations/:id", routes.GetPluginRelation)
 		v1.PUT("/plugin-relations/:id", routes.UpdatePluginRelation)
 		v1.DELETE("/plugin-relations/:id", routes.DeletePluginRelation)
 
@@ -39,7 +39,7 @@ func startServer(conn *amqp.Connection) {
 		v1.POST("/plugins/:id/enable", routes.EnablePlugin)
 		v1.POST("/plugins/:id/disable", routes.DisablePlugin)
 
-		// Health check injecting the rabbit connection
+		// Health check injecting the RabbitMQ connection
 		healthHandler := routes.HealthHandler{
 			RabbitConn: conn,
 		}
@@ -50,7 +50,7 @@ func startServer(conn *amqp.Connection) {
 	// @version		1.0
 	// @BasePath	/api/converter-service/v1
 
-	// Swagger
+	// Swagger endpoints
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.GET("/api/converter-service/v1/api-docs", func(c *gin.Context) {
 		c.Redirect(http.StatusPermanentRedirect, "/swagger/doc.json")

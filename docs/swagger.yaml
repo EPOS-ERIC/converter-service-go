@@ -5,6 +5,9 @@ definitions:
         description: arguments for the execution (if needed (like the main java class
           name))
         type: string
+      description:
+        description: a description of the plugin
+        type: string
       enabled:
         description: if the plugin is enabled aka if it can be used
         type: boolean
@@ -17,35 +20,61 @@ definitions:
       installed:
         description: if the plugin is currently installed
         type: boolean
+      name:
+        description: the name of the plugin
+        type: string
       repository:
         description: the url from which to clone the repository
         type: string
       runtime:
+        allOf:
+        - $ref: '#/definitions/model.SupportedRuntimes'
         description: the runtime (binary, java, python, ...)
-        type: string
       version:
         description: the name of the branch if version_type is branch or the tag number
           if it is tag
         type: string
       version_type:
+        allOf:
+        - $ref: '#/definitions/model.VersionType'
         description: either 'branch' or 'tag'
-        type: string
     type: object
   model.PluginRelation:
     properties:
       id:
+        description: the id of the relation (generated when the relation is created)
         type: string
       input_format:
+        description: the file format expected by the plugin for the input
         type: string
       output_format:
+        description: the file format expected as the output from the plugin execution
         type: string
       plugin_id:
+        description: the id of the plugin (from the plugin table)
         type: string
       relation_id:
-        type: string
-      relation_type:
+        description: the instanceId of the distribution
         type: string
     type: object
+  model.SupportedRuntimes:
+    enum:
+    - binary
+    - java
+    - python
+    type: string
+    x-enum-varnames:
+    - SupportedRuntimesBinary
+    - SupportedRuntimesJava
+    - SupportedRuntimesPython
+  model.VersionType:
+    enum:
+    - branch
+    - tag
+    type: string
+    x-enum-varnames:
+    - VersionTypeBranch
+    - VersionTypeTag
   routes.HTTPError:
     properties:
       code:
@@ -75,38 +104,29 @@ paths:
       summary: Check the health of the service
       tags:
       - health
-  /plugin:
-    post:
-      consumes:
-      - application/json
-      description: Create a new plugin in the database. The plugin ID will be assigned
-        upon creation.
-      parameters:
-      - description: Plugin object
-        in: body
-        name: plugin
-        required: true
-        schema:
-          $ref: '#/definitions/model.Plugin'
+  /plugin-relations:
+    get:
+      description: Retrieve all plugin relations from the database
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
-            $ref: '#/definitions/model.Plugin'
-        "400":
-          description: Bad Request
+            items:
+              $ref: '#/definitions/model.PluginRelation'
+            type: array
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/routes.HTTPError'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/routes.HTTPError'
-      summary: Create a new plugin
+      summary: Get all plugin relations
       tags:
-      - plugins
-  /plugin-relation:
+      - plugin-relations
     post:
       consumes:
       - application/json
@@ -137,34 +157,11 @@ paths:
       summary: Create a new plugin relation
       tags:
       - plugin-relations
-  /plugin-relations:
-    get:
-      description: Retrieve all plugin relations from the database
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.PluginRelation'
-            type: array
-        "204":
-          description: No Content
-          schema:
-            $ref: '#/definitions/routes.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/routes.HTTPError'
-      summary: Get all plugin relations
-      tags:
-      - plugin-relations
   /plugin-relations/{id}:
     delete:
       description: Delete a plugin relation from the database
       parameters:
-      - description: Plugin ID
+      - description: Plugin Relation ID
         in: path
         name: id
         required: true
@@ -176,8 +173,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.PluginRelation'
-        "204":
-          description: No Content
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/routes.HTTPError'
         "500":
@@ -202,8 +199,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.PluginRelation'
-        "204":
-          description: No Content
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/routes.HTTPError'
         "500":
@@ -213,36 +210,13 @@ paths:
       summary: Get a plugin relation
       tags:
       - plugin-relations
-  /plugins:
-    get:
-      description: Retrieve all plugins from the database
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.Plugin'
-            type: array
-        "204":
-          description: No Content
-          schema:
-            $ref: '#/definitions/routes.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/routes.HTTPError'
-      summary: Get all plugins
-      tags:
-      - plugins
-  /plugins-relations/{id}:
     put:
       consumes:
       - application/json
-      description: Update an existing plugin relation in the database
+      description: Update an existing plugin relation in the database. Even if explicitly
+        passed in the body, the Id of the plugin relation will not be changed
       parameters:
-      - description: Plugin ID
+      - description: Plugin Relation ID
         in: path
         name: id
         required: true
@@ -271,6 +245,59 @@ paths:
       summary: Update a plugin relation
       tags:
       - plugin-relations
+  /plugins:
+    get:
+      description: Retrieve all plugins from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Plugin'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Get all plugins
+      tags:
+      - plugins
+    post:
+      consumes:
+      - application/json
+      description: Create a new plugin in the database. The plugin ID will be assigned
+        upon creation.
+      parameters:
+      - description: Plugin object
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/model.Plugin'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Plugin'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/routes.HTTPError'
+      summary: Create a new plugin
+      tags:
+      - plugins
   /plugins/{id}:
     delete:
       description: Delete a plugin from the database
@@ -287,8 +314,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.Plugin'
-        "204":
-          description: No Content
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/routes.HTTPError'
         "500":
@@ -313,8 +340,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.Plugin'
-        "204":
-          description: No Content
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/routes.HTTPError'
         "500":
@@ -327,7 +354,8 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update an existing plugin in the database
+      description: Update an existing plugin in the database. Even if explicitly passed
+        in the body, the Id of the plugin will not be changed
       parameters:
       - description: Plugin ID
         in: path

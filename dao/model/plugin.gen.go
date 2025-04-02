@@ -18,6 +18,10 @@ type SupportedRuntimes string
 type Plugin struct {
 	// the id of the plugin (generated when the plugin is created)
 	ID string `gorm:"column:id;primaryKey" json:"id"`
+	// the name of the plugin
+	Name string `gorm:"column:name;not null" json:"name"`
+	// a description of the plugin
+	Description string `gorm:"column:description;not null" json:"description"`
 	// the name of the branch if version_type is branch or the tag number if it is tag
 	Version string `gorm:"column:version;not null" json:"version"`
 	// either 'branch' or 'tag'
@@ -45,6 +49,9 @@ func (p *Plugin) Validate() error {
 	// TODO: better validation
 	if p.ID == "" || uuid.Validate(p.ID) != nil {
 		return fmt.Errorf("invalid Id in plugin: %+v", p)
+	}
+	if p.Name == "" {
+		return fmt.Errorf("invalid Name in plugin: %+v", p)
 	}
 	if p.Version == "" {
 		return fmt.Errorf("invalid Version in plugin: %+v", p)

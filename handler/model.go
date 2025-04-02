@@ -12,7 +12,7 @@ type Message struct {
 
 type Parameters struct {
 	PluginId       string `json:"pluginId,omitempty"`
-	OperationId    string `json:"operationId"`
+	DistributionId     string `json:"distributionId"`
 	RequestFormat  string `json:"requestContentType,omitempty"`
 	ResponseFormat string `json:"responseContentType,omitempty"`
 }

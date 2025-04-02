@@ -11,7 +11,6 @@ func GetPlugins() ([]model.Plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Select all users.
 	var listOfPlugins []model.Plugin
 	err = db.Model(&listOfPlugins).Find(&listOfPlugins).Error
 	if err != nil {
@@ -25,11 +24,27 @@ func GetPluginRelation() ([]model.PluginRelation, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Select all users.
 	var listOfPluginRelation []model.PluginRelation
 	err = db.Model(&listOfPluginRelation).Find(&listOfPluginRelation).Error
 	if err != nil {
 		panic(err)
+	}
+	return listOfPluginRelation, nil
+}
+
+func GetPluginRelationForEnabledPlugins() ([]model.PluginRelation, error) {
+	db, err := Connect()
+	if err != nil {
+		return nil, err
+	}
+	var listOfPluginRelation []model.PluginRelation
+	// Join the plugins table and filter where plugins.enabled and plugins.installed are true.
+	err = db.
+		Joins("JOIN plugin ON plugin.id = plugin_relations.plugin_id").
+		Where("plugin.enabled = ? AND plugin.installed = ?", true, true).
+		Find(&listOfPluginRelation).Error
+	if err != nil {
+		return nil, err
 	}
 	return listOfPluginRelation, nil
 }
@@ -47,7 +62,7 @@ func GetPluginRelationById(id string) (model.PluginRelation, error) {
 	return plugin, nil
 }
 
-func GetPluginRelationsByOperationId(operationId string) ([]model.PluginRelation, error) {
+func GetPluginRelationsByDistributionId(distributionId string) ([]model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
@@ -63,12 +78,12 @@ func GetPluginRelationsByOperationId(operationId string) ([]model.PluginRelation
 
 	// Get the plugin relations by operationInstanceId
 	var listOfPluginRelation []model.PluginRelation
-	err = db.Model(&listOfPluginRelation).Where("relation_id = ?", operationId).Find(&listOfPluginRelation).Error
+	err = db.Model(&listOfPluginRelation).Where("relation_id = ?", distributionId).Find(&listOfPluginRelation).Error
 	if err != nil {
 		return nil, err
 	}
 	if len(listOfPluginRelation) == 0 {
-		return nil, fmt.Errorf("eror: found 0 plugins related to OperationId: %s", operationId)
+		return nil, fmt.Errorf("eror: found 0 plugins related to DistributionId: %s", distributionId)
 	}
 	return listOfPluginRelation, nil
 }

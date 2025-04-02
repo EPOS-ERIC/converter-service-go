@@ -8,10 +8,13 @@ import (
 	"path/filepath"
 
 	"github.com/epos-eu/converter-service/connection"
+	"github.com/epos-eu/converter-service/loggers"
 )
 
 func Handler(body string) (string, error) {
 	var message Message
+
+	loggers.EA_LOGGER.Debug("Handling message", "message", body)
 
 	if err := json.Unmarshal([]byte(body), &message); err != nil {
 		return "", fmt.Errorf("error converting payload: %v", err)
@@ -22,8 +25,8 @@ func Handler(body string) (string, error) {
 		return "", fmt.Errorf("error getting the payload: the payload is nil")
 	}
 	// either the operationId or the pluginId must be set to convert the message
-	if message.Parameters.OperationId == "" && message.Parameters.PluginId == "" {
-		return "", fmt.Errorf("error: both the operationId and the pluginId are nil")
+	if message.Parameters.DistributionId == "" && message.Parameters.PluginId == "" {
+		return "", fmt.Errorf("error: both the distributionId and the pluginId are nil")
 	}
 	// if the pluginId is not given, then the responseContentType is needed to convert the message
 	if message.Parameters.PluginId == "" && message.Parameters.ResponseFormat == "" {
@@ -81,7 +84,7 @@ func Handler(body string) (string, error) {
 func guessPluginIdUsingOriginalFormats(params Parameters) (string, error) {
 	pluginId := ""
 
-	pluginRelations, err := connection.GetPluginRelationsByOperationId(params.OperationId)
+	pluginRelations, err := connection.GetPluginRelationsByDistributionId(params.DistributionId)
 	if err != nil {
 		return "", fmt.Errorf("error getting plugins relations: %v", err)
 	}
@@ -120,7 +123,7 @@ func guessPluginIdUsingPayloadFormat(params Parameters) (string, error) {
 	}
 
 	if pluginId == "" {
-		return "", fmt.Errorf("cannot infer the pluginId from the operationId and format:\nOperationId: %s\nOriginalRequestFormat: %s\nParsedRequestFormat: %s\nResponseFormat: %s", params.OperationId, originalRequestFormat, params.RequestFormat, params.ResponseFormat)
+		return "", fmt.Errorf("cannot infer the pluginId from the relationId and format:\nRelationId: %s\nOriginalRequestFormat: %s\nParsedRequestFormat: %s\nResponseFormat: %s", params.DistributionId, originalRequestFormat, params.RequestFormat, params.ResponseFormat)
 	}
 	return pluginId, nil
 }
@@ -142,7 +145,7 @@ func guessPluginId(parameters Parameters) (string, error) {
 				log.Printf("could not guess the puling id (#3): %v", err)
 
 				// try to use the first plugin connected with this operation id anyway (method #4)
-				pluginRelations, err := connection.GetPluginRelationsByOperationId(parameters.OperationId)
+				pluginRelations, err := connection.GetPluginRelationsByDistributionId(parameters.DistributionId)
 				if err != nil {
 					return "", fmt.Errorf("error getting plugins relations: %v", err)
 				}
@@ -164,7 +167,7 @@ func guessPluginId(parameters Parameters) (string, error) {
 func guessPluginIdFromOutputFormat(params Parameters) (string, error) {
 	pluginId := ""
 
-	pluginRelations, err := connection.GetPluginRelationsByOperationId(params.OperationId)
+	pluginRelations, err := connection.GetPluginRelationsByDistributionId(params.DistributionId)
 	if err != nil {
 		return "", fmt.Errorf("error getting plugins relations: %v", err)
 	}
