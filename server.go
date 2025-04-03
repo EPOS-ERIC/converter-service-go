@@ -2,14 +2,13 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/epos-eu/converter-service/docs"
 	"github.com/epos-eu/converter-service/loggers"
 	"github.com/epos-eu/converter-service/routes"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
-	swaggerfiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // startServer initializes the Gin engine and starts listening on :8080.
@@ -51,13 +50,21 @@ func startServer(conn *amqp.Connection) {
 	// @BasePath	/api/converter-service/v1
 
 	// Swagger endpoints
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.GET("/api/converter-service/v1/api-docs", func(c *gin.Context) {
-		c.Redirect(http.StatusPermanentRedirect, "/swagger/doc.json")
+		// Read the generated OpenAPI 3.0 JSON file
+		openAPI3Data, err := os.ReadFile("./openapi.json")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to read OpenAPI 3.0 spec",
+			})
+			return
+		}
+
+		c.Data(http.StatusOK, "application/json", openAPI3Data)
 	})
-	r.GET("/api/converter-service/v1", func(c *gin.Context) {
-		c.Redirect(http.StatusPermanentRedirect, "/swagger/index.html")
-	})
+	// r.GET("/api/converter-service/v1/api-docs", func(c *gin.Context) {
+	// 	c.Redirect(http.StatusPermanentRedirect, "/swagger/swagger.json")
+	// })
 
 	err := r.Run(":8080")
 	if err != nil {

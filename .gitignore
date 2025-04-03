@@ -1,3 +1,5 @@
 .DS_Store
 /.idea/
 /converter-service
+/docs/
+/node_modules/
