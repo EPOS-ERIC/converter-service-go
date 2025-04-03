@@ -26,7 +26,7 @@ type HTTPError struct {
 //
 //	@Summary		Get all plugins
 //	@Description	Retrieve all plugins from the database
-//	@Tags			plugins
+//	@Tags			Converter Service
 //	@Produce		json
 //	@Success		200	{array}		model.Plugin
 //	@Failure		404	{object}	HTTPError
@@ -51,19 +51,19 @@ func GetAllPlugins(c *gin.Context) {
 //
 //	@Summary		Get a plugin
 //	@Description	Retrieve a plugin from the database
-//	@Tags			plugins
+//	@Tags			Converter Service
 //	@Produce		json
-//	@Param			id	path		string	true	"Plugin ID"
+//	@Param			plugin_id	path		string	true	"Plugin ID"
 //	@Success		200	{object}	model.Plugin
 //	@Failure		404	{object}	HTTPError
 //	@Failure		500	{object}	HTTPError
-//	@Router			/plugins/{id} [get]
+//	@Router			/plugins/{plugin_id} [get]
 func GetPlugin(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("plugin_id")
 	plugin, err := connection.GetPluginById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin found with id: " + id})
+			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin found with plugin_id: " + id})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -76,17 +76,17 @@ func GetPlugin(c *gin.Context) {
 //
 //	@Summary		Update a plugin
 //	@Description	Update an existing plugin in the database. Even if explicitly passed in the body, the Id of the plugin will not be changed
-//	@Tags			plugins
+//	@Tags			Converter Service
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string	true	"Plugin ID"
+//	@Param			plugin_id		path		string			true	"Plugin ID"
 //	@Param			plugin	body		model.Plugin	true	"Plugin object"
-//	@Success		200	{object}	model.Plugin
-//	@Failure		400	{object}	HTTPError
-//	@Failure		500	{object}	HTTPError
-//	@Router			/plugins/{id} [put]
+//	@Success		200		{object}	model.Plugin
+//	@Failure		400		{object}	HTTPError
+//	@Failure		500		{object}	HTTPError
+//	@Router			/plugins/{plugin_id} [put]
 func UpdatePlugin(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("plugin_id")
 
 	var plugin model.Plugin
 	if err := c.ShouldBindJSON(&plugin); err != nil {
@@ -106,15 +106,15 @@ func UpdatePlugin(c *gin.Context) {
 //
 //	@Summary		Delete a plugin
 //	@Description	Delete a plugin from the database
-//	@Tags			plugins
+//	@Tags			Converter Service
 //	@Produce		json
-//	@Param			id	path		string	true	"Plugin ID"
+//	@Param			plugin_id	path		string	true	"Plugin ID"
 //	@Success		200	{object}	model.Plugin
 //	@Failure		404	{object}	HTTPError
 //	@Failure		500	{object}	HTTPError
-//	@Router			/plugins/{id} [delete]
+//	@Router			/plugins/{plugin_id} [delete]
 func DeletePlugin(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("plugin_id")
 
 	// Delete the plugin from the database
 	deletedPlugin, err := connection.DeletePlugin(id)
@@ -134,13 +134,6 @@ func DeletePlugin(c *gin.Context) {
 		return
 	}
 
-	// Delete the relations related to this plugin
-	err = connection.DeletePluginRelationsForPlugin(deletedPlugin.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error deleting plugin relations related to plugin: %v", err)})
-		return
-	}
-
 	c.JSON(http.StatusOK, deletedPlugin)
 }
 
@@ -148,13 +141,13 @@ func DeletePlugin(c *gin.Context) {
 //
 //	@Summary		Create a new plugin
 //	@Description	Create a new plugin in the database. The plugin ID will be assigned upon creation.
-//	@Tags			plugins
+//	@Tags			Converter Service
 //	@Accept			json
 //	@Produce		json
 //	@Param			plugin	body		model.Plugin	true	"Plugin object"
-//	@Success		201	{object}	model.Plugin
-//	@Failure		400	{object}	HTTPError
-//	@Failure		500	{object}	HTTPError
+//	@Success		201		{object}	model.Plugin
+//	@Failure		400		{object}	HTTPError
+//	@Failure		500		{object}	HTTPError
 //	@Router			/plugins [post]
 func CreatePlugin(c *gin.Context) {
 	var plugin model.Plugin

@@ -14,14 +14,6 @@ type HealthHandler struct {
 }
 
 // Health check
-//
-//	@Summary		Check the health of the service
-//	@Description	Check the health of the RabbitMQ connection and the database connection
-//	@Tags			health
-//	@Produce		json
-//	@Success		200	{string}	string	"Healthy"
-//	@Failure		500	{object}	HTTPError
-//	@Router			/health [get]
 func (h *HealthHandler) Health(c *gin.Context) {
 	err := health(h.RabbitConn)
 	if err != nil {

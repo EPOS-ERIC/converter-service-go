@@ -1,12 +1,18 @@
-.PHONY: gen-docs convert-swagger clean setup
+.PHONY: gen-docs convert-swagger clean setup build-go build-docker clean-all
 
-# Default target
-all: setup gen-docs convert-swagger
+# Build Docker image 
+build-docker: build-go
+	@echo "Building Docker image: $(IMAGE_NAME)"
+	$(eval IMAGE_NAME := converter-service-go-refactoring)
+	docker build -t $(IMAGE_NAME) .
 
-# Install necessary npm packages
+# Install necessary npm and go packages
 setup:
-	@echo "Setting up npm dependencies..."
+	@echo "Setting up dependencies..."
 	npm install --no-save swagger2openapi
+	go get -d -v ./...
+	go install -v ./...
+	go install github.com/swaggo/swag/cmd/swag@latest
 
 # Generate Swagger 2.0 docs using swag
 gen-docs:
@@ -24,13 +30,17 @@ convert-swagger:
 		exit 1; \
 	fi
 
+# Build the Go application (with embedded OpenAPI file)
+build-go: gen-docs convert-swagger
+	@echo "Building Go binary with embedded OpenAPI spec..."
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build . 
+
 # Clean generated documentation
 clean:
 	@echo "Cleaning generated documentation..."
-	rm -f ./docs/swagger.json ./docs/swagger.yaml ./openapi3.json
+	rm -f ./docs/swagger.json ./docs/swagger.yaml ./openapi.json
 	rm -f ./docs/docs.go
 
-# Deep clean (documentation + npm modules)
 clean-all: clean
 	@echo "Removing npm modules..."
 	rm -rf node_modules

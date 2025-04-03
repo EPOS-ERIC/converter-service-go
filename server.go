@@ -1,21 +1,25 @@
 package main
 
 import (
+	_ "embed"
 	"net/http"
-	"os"
 
-	"github.com/epos-eu/converter-service/docs"
 	"github.com/epos-eu/converter-service/loggers"
 	"github.com/epos-eu/converter-service/routes"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// Embed the OpenAPI 3.0 JSON specification file
+//
+//go:embed openapi.json
+var openAPISpec []byte
+
 // startServer initializes the Gin engine and starts listening on :8080.
 // The RabbitMQ connection is passed for health checks.
 func startServer(conn *amqp.Connection) {
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-	docs.SwaggerInfo.BasePath = "/api/converter-service/v1"
 
 	// Routes
 	v1 := r.Group("/api/converter-service/v1")
@@ -23,48 +27,37 @@ func startServer(conn *amqp.Connection) {
 		// Plugin CRUD endpoints with consistent naming
 		v1.POST("/plugins", routes.CreatePlugin)
 		v1.GET("/plugins", routes.GetAllPlugins)
-		v1.GET("/plugins/:id", routes.GetPlugin)
-		v1.PUT("/plugins/:id", routes.UpdatePlugin)
-		v1.DELETE("/plugins/:id", routes.DeletePlugin)
+		v1.GET("/plugins/:plugin_id", routes.GetPlugin)
+		v1.PUT("/plugins/:plugin_id", routes.UpdatePlugin)
+		v1.DELETE("/plugins/:plugin_id", routes.DeletePlugin)
 
 		// Plugin Relations CRUD endpoints
 		v1.POST("/plugin-relations", routes.CreatePluginRelation)
 		v1.GET("/plugin-relations", routes.GetAllPluginRelations)
-		v1.GET("/plugin-relations/:id", routes.GetPluginRelation)
-		v1.PUT("/plugin-relations/:id", routes.UpdatePluginRelation)
-		v1.DELETE("/plugin-relations/:id", routes.DeletePluginRelation)
+		v1.GET("/plugin-relations/:plugin_id", routes.GetPluginRelation)
+		v1.PUT("/plugin-relations/:plugin_id", routes.UpdatePluginRelation)
+		v1.DELETE("/plugin-relations/:plugin_id", routes.DeletePluginRelation)
 
 		// Enable and disable plugins
-		v1.POST("/plugins/:id/enable", routes.EnablePlugin)
-		v1.POST("/plugins/:id/disable", routes.DisablePlugin)
+		v1.POST("/plugins/:plugin_id/enable", routes.EnablePlugin)
+		v1.POST("/plugins/:plugin_id/disable", routes.DisablePlugin)
 
 		// Health check injecting the RabbitMQ connection
 		healthHandler := routes.HealthHandler{
 			RabbitConn: conn,
 		}
-		v1.GET("/health", healthHandler.Health)
+		v1.GET("/actuator/health", healthHandler.Health)
+
+		v1.GET("/api-docs", func(c *gin.Context) {
+			c.Data(http.StatusOK, "application/json", openAPISpec)
+		})
 	}
 
-	// @title		Converter Service API
-	// @version		1.0
-	// @BasePath	/api/converter-service/v1
+	//	@title		Converter Service API
+	//	@version	1.0
+	//	@BasePath	/api/converter-service/v1
 
 	// Swagger endpoints
-	r.GET("/api/converter-service/v1/api-docs", func(c *gin.Context) {
-		// Read the generated OpenAPI 3.0 JSON file
-		openAPI3Data, err := os.ReadFile("./openapi.json")
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to read OpenAPI 3.0 spec",
-			})
-			return
-		}
-
-		c.Data(http.StatusOK, "application/json", openAPI3Data)
-	})
-	// r.GET("/api/converter-service/v1/api-docs", func(c *gin.Context) {
-	// 	c.Redirect(http.StatusPermanentRedirect, "/swagger/swagger.json")
-	// })
 
 	err := r.Run(":8080")
 	if err != nil {
