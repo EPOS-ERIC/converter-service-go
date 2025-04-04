@@ -17,7 +17,7 @@ var (
 // creates sub-loggers for each component.
 func InitSlog() {
 	// Determine the log level.
-	logLevel := slog.LevelDebug
+	logLevel := slog.LevelInfo
 	switch os.Getenv("LOG_LEVEL") {
 	case "INFO":
 		logLevel = slog.LevelInfo
