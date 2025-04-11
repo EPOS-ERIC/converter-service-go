@@ -78,14 +78,14 @@ func createTempFiles(dir, payload string) (string, string, string, error) {
 func cleanupTempFiles(files ...string) {
 	for _, file := range files {
 		if err := os.RemoveAll(file); err != nil {
-			loggers.EA_LOGGER.Printf("error removing temp dir: %v\n", err)
+			loggers.EA_LOGGER.Error("error removing temp dir", "error", err)
 		}
 	}
 }
 
 func getUniqueFileName(path string) (string, error) {
 	maxIterations := 10
-	for i := 0; i < maxIterations; i++ {
+	for range maxIterations {
 		name := randomString(10)
 		fullPath := filepath.Join(path, name)
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {

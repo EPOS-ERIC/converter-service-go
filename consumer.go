@@ -13,35 +13,30 @@ import (
 )
 
 func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	for m := range msgs {
-		loggers.EA_LOGGER.Println("Received message")
+		loggers.EA_LOGGER.Info("Received message")
 		newRouting := strings.Split(m.RoutingKey, ".")
 		routingReturn := buildRoutingKey(newRouting, "access_return")
 
-		loggers.EA_LOGGER.Println("Handling message")
+		loggers.EA_LOGGER.Info("Handling message")
 		response, err := handler.Handler(string(m.Body))
 		if err != nil {
-			loggers.EA_LOGGER.Printf("Failed to convert the message: %v\n", err)
-			err := publishError(ch, ctx, "externalAccess", routingReturn, m, err)
+			loggers.EA_LOGGER.Error("Failed to convert the message", "error", err)
+			err := publishError(ch, "externalAccess", routingReturn, m, err)
 			if err != nil {
-				loggers.EA_LOGGER.Printf("Failed to publish the error message: %v\n", err)
+				loggers.EA_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			err = m.Ack(true)
-			if err != nil {
-				loggers.EA_LOGGER.Printf("Error acknowledging: %v\n", err)
+			if ackErr := m.Ack(true); ackErr != nil {
+				loggers.EA_LOGGER.Error("Error acknowledging message", "error", ackErr)
 				continue
 			}
-			loggers.EA_LOGGER.Println("Message handled with error\n")
+			loggers.EA_LOGGER.Info("Message handled with error")
 			continue
 		}
 
-		loggers.EA_LOGGER.Println("Sending converted message")
-		err = ch.PublishWithContext(
-			ctx,
+		loggers.EA_LOGGER.Debug("Sending converted message", "message", string(response))
+		err = ch.Publish(
 			"externalAccess",
 			routingReturn,
 			false,
@@ -54,16 +49,15 @@ func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			},
 		)
 		if err != nil {
-			loggers.EA_LOGGER.Printf("Failed to publish the converted message: %v\n", err)
+			loggers.EA_LOGGER.Error("Failed to publish the converted message", "error", err)
 			continue
 		}
 
-		err = m.Ack(true)
-		if err != nil {
-			loggers.EA_LOGGER.Printf("Error acknowledging: %v\n", err)
+		if ackErr := m.Ack(true); ackErr != nil {
+			loggers.EA_LOGGER.Error("Error acknowledging message", "error", ackErr)
 			continue
 		}
-		loggers.EA_LOGGER.Println("Message handled\n")
+		loggers.EA_LOGGER.Info("Message handled")
 	}
 }
 
@@ -73,14 +67,14 @@ func handleProcessingServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 	defer cancel()
 
 	for m := range msgs {
-		loggers.PS_LOGGER.Println("Received message")
+		loggers.PS_LOGGER.Info("Received message")
 		newRouting := strings.Split(m.RoutingKey, ".")
 		routingReturn := buildRoutingKey(newRouting, "processing_return")
 
 		// TODO: handle message
-		loggers.PS_LOGGER.Printf("Handling RESOURCES message")
+		loggers.PS_LOGGER.Info("Handling RESOURCES message")
 
-		loggers.PS_LOGGER.Println("Sending converted message")
+		loggers.PS_LOGGER.Info("Sending converted message")
 		err := ch.PublishWithContext(
 			ctx,
 			"processService",
@@ -95,16 +89,15 @@ func handleProcessingServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			},
 		)
 		if err != nil {
-			loggers.PS_LOGGER.Printf("Failed to publish the converted message: %v\n", err)
+			loggers.PS_LOGGER.Error("Failed to publish the converted message", "error", err)
 			continue
 		}
 
-		err = m.Ack(true)
-		if err != nil {
-			loggers.PS_LOGGER.Printf("Error acknowledging: %v\n", err)
+		if ackErr := m.Ack(true); ackErr != nil {
+			loggers.PS_LOGGER.Error("Error acknowledging message", "error", ackErr)
 			continue
 		}
-		loggers.PS_LOGGER.Println("Message handled\n")
+		loggers.PS_LOGGER.Info("Message handled")
 	}
 }
 
@@ -115,8 +108,8 @@ type Relation struct {
 }
 
 type Plugin struct {
-	OperationID string     `json:"operationId"`
-	Relations   []Relation `json:"relations"`
+	DistributionID string     `json:"distributionId"`
+	Relations      []Relation `json:"relations"`
 }
 
 type PluginRelation []Plugin
@@ -130,52 +123,46 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 	defer cancel()
 
 	for m := range msgs {
-		loggers.RS_LOGGER.Println("Received message")
+		loggers.RS_LOGGER.Info("Received message")
 		newRouting := strings.Split(m.RoutingKey, ".")
 		routingReturn := buildRoutingKey(newRouting, "map_return")
 
 		var resourcesMsg ResourcesMsg
 		err := json.Unmarshal(m.Body, &resourcesMsg)
 		if err != nil || resourcesMsg.Plugins != "all" {
-			loggers.RS_LOGGER.Printf("Failed to process the message: %v\n", err)
-			err := publishError(ch, ctx, "metadataService", routingReturn, m, err)
+			loggers.RS_LOGGER.Error("Failed to process the message", "error", err)
+			err := publishError(ch, "metadataService", routingReturn, m, err)
 			if err != nil {
-				loggers.RS_LOGGER.Printf("Failed to publish the error message: %v\n", err)
+				loggers.RS_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			err = m.Ack(true)
-			if err != nil {
-				loggers.RS_LOGGER.Printf("Error acknowledging: %v\n", err)
+			if ackErr := m.Ack(true); ackErr != nil {
+				loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
 				continue
 			}
-			loggers.RS_LOGGER.Println("Message handled with error\n")
+			loggers.RS_LOGGER.Info("Message handled with error")
 			continue
 		}
 
 		// get all plugin relations
-		relations, err := connection.GetPluginRelation()
+		relations, err := connection.GetPluginRelationForEnabledPlugins()
 		if err != nil {
-			loggers.RS_LOGGER.Printf("Failed to unmarshal the message: %v\n", err)
-			err := publishError(ch, ctx, "metadataService", routingReturn, m, err)
+			loggers.RS_LOGGER.Error("Failed to get plugin relations", "error", err)
+			err := publishError(ch, "metadataService", routingReturn, m, err)
 			if err != nil {
-				loggers.RS_LOGGER.Printf("Failed to publish the error message: %v\n", err)
+				loggers.RS_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			err = m.Ack(true)
-			if err != nil {
-				loggers.RS_LOGGER.Printf("Error acknowledging: %v\n", err)
+			if ackErr := m.Ack(true); ackErr != nil {
+				loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
 				continue
 			}
-			loggers.RS_LOGGER.Println("Message handled with error\n")
+			loggers.RS_LOGGER.Info("Message handled with error")
 			continue
 		}
 		// group them by OperationID
 		operations := make(map[string][]Relation)
 		for _, relation := range relations {
-			_, ok := operations[relation.RelationID]
-			if !ok {
-				operations[relation.RelationID] = make([]Relation, 0)
-			}
 			operations[relation.RelationID] = append(operations[relation.RelationID], Relation{
 				PluginID:     relation.PluginID,
 				InputFormat:  relation.InputFormat,
@@ -186,31 +173,28 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 		responseStr := make([]Plugin, 0)
 		for k, v := range operations {
 			responseStr = append(responseStr, Plugin{
-				OperationID: k,
-				Relations:   v,
+				DistributionID: k,
+				Relations:      v,
 			})
 		}
 
-		// loggers.RS_LOGGER.Printf("CONVERTED: %+v", responseStr)
-
 		response, err := json.Marshal(responseStr)
 		if err != nil {
-			loggers.RS_LOGGER.Printf("Failed to process the message: %v\n", err)
-			err := publishError(ch, ctx, "metadataService", routingReturn, m, err)
+			loggers.RS_LOGGER.Error("Failed to marshal response", "error", err)
+			err := publishError(ch, "metadataService", routingReturn, m, err)
 			if err != nil {
-				loggers.RS_LOGGER.Printf("Failed to publish the error message: %v\n", err)
+				loggers.RS_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			err = m.Ack(true)
-			if err != nil {
-				loggers.RS_LOGGER.Printf("Error acknowledging: %v\n", err)
+			if ackErr := m.Ack(true); ackErr != nil {
+				loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
 				continue
 			}
-			loggers.RS_LOGGER.Println("Message handled with error\n")
+			loggers.RS_LOGGER.Info("Message handled with error")
 			continue
 		}
 
-		loggers.RS_LOGGER.Println("Sending converted message")
+		// loggers.RS_LOGGER.Debug("Sending converted message", "message", response)
 		err = ch.PublishWithContext(
 			ctx,
 			"metadataService",
@@ -225,16 +209,15 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			},
 		)
 		if err != nil {
-			loggers.RS_LOGGER.Printf("Failed to publish the converted message: %v\n", err)
+			loggers.RS_LOGGER.Error("Failed to publish the converted message", "error", err)
 			continue
 		}
 
-		err = m.Ack(true)
-		if err != nil {
-			loggers.RS_LOGGER.Printf("Error acknowledging: %v\n", err)
+		if ackErr := m.Ack(true); ackErr != nil {
+			loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
 			continue
 		}
-		loggers.RS_LOGGER.Println("Message handled\n")
+		loggers.RS_LOGGER.Info("Message handled")
 	}
 }
 
@@ -245,9 +228,8 @@ func buildRoutingKey(sections []string, suffix string) string {
 	return strings.Join(sections[:len(sections)-1], ".") + "." + suffix
 }
 
-func publishError(ch *amqp.Channel, ctx context.Context, exchange, routingKey string, d amqp.Delivery, err error) error {
-	return ch.PublishWithContext(
-		ctx,
+func publishError(ch *amqp.Channel, exchange, routingKey string, d amqp.Delivery, err error) error {
+	return ch.Publish(
 		exchange,
 		routingKey,
 		false,

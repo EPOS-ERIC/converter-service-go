@@ -9,4 +9,4 @@ WORKDIR /opt/converter
 
 COPY converter-service converter-service
 
-CMD ./converter-service
+CMD ["./converter-service"]

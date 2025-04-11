@@ -11,7 +11,6 @@ func GetPlugins() ([]model.Plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Select all users.
 	var listOfPlugins []model.Plugin
 	err = db.Model(&listOfPlugins).Find(&listOfPlugins).Error
 	if err != nil {
@@ -25,11 +24,27 @@ func GetPluginRelation() ([]model.PluginRelation, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Select all users.
 	var listOfPluginRelation []model.PluginRelation
 	err = db.Model(&listOfPluginRelation).Find(&listOfPluginRelation).Error
 	if err != nil {
 		panic(err)
+	}
+	return listOfPluginRelation, nil
+}
+
+func GetPluginRelationForEnabledPlugins() ([]model.PluginRelation, error) {
+	db, err := Connect()
+	if err != nil {
+		return nil, err
+	}
+	var listOfPluginRelation []model.PluginRelation
+	// Join the plugins table and filter where plugins.enabled and plugins.installed are true.
+	err = db.
+		Joins("JOIN plugin ON plugin.id = plugin_relations.plugin_id").
+		Where("plugin.enabled = ? AND plugin.installed = ?", true, true).
+		Find(&listOfPluginRelation).Error
+	if err != nil {
+		return nil, err
 	}
 	return listOfPluginRelation, nil
 }
@@ -47,7 +62,7 @@ func GetPluginRelationById(id string) (model.PluginRelation, error) {
 	return plugin, nil
 }
 
-func GetPluginRelationsByOperationId(operationId string) ([]model.PluginRelation, error) {
+func GetPluginRelationsByDistributionId(distributionId string) ([]model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
@@ -63,12 +78,12 @@ func GetPluginRelationsByOperationId(operationId string) ([]model.PluginRelation
 
 	// Get the plugin relations by operationInstanceId
 	var listOfPluginRelation []model.PluginRelation
-	err = db.Model(&listOfPluginRelation).Where("relation_id = ?", operationId).Find(&listOfPluginRelation).Error
+	err = db.Model(&listOfPluginRelation).Where("relation_id = ?", distributionId).Find(&listOfPluginRelation).Error
 	if err != nil {
 		return nil, err
 	}
 	if len(listOfPluginRelation) == 0 {
-		return nil, fmt.Errorf("eror: found 0 plugins related to OperationId: %s", operationId)
+		return nil, fmt.Errorf("eror: found 0 plugins related to DistributionId: %s", distributionId)
 	}
 	return listOfPluginRelation, nil
 }
@@ -100,5 +115,132 @@ func EnablePlugin(id string, enable bool) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func UpdatePlugin(id string, plugin model.Plugin) error {
+	db, err := Connect()
+	if err != nil {
+		return err
+	}
+
+	// Find the existing plugin record by ID
+	var existing model.Plugin
+	err = db.First(&existing, "id = ?", id).Error
+	if err != nil {
+		return err
+	}
+
+	// Update the existing plugin record with the new data
+	err = db.Model(&existing).Updates(plugin).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeletePlugin(id string) (plugin model.Plugin, err error) {
+	db, err := Connect()
+	if err != nil {
+		return plugin, err
+	}
+
+	// Retrieve the plugin to be deleted
+	err = db.First(&plugin, "id = ?", id).Error
+	if err != nil {
+		return plugin, err
+	}
+
+	// Delete the plugin record
+	err = db.Delete(&plugin).Error
+	if err != nil {
+		return plugin, err
+	}
+
+	return plugin, nil
+}
+
+func CreatePlugin(plugin model.Plugin) (model.Plugin, error) {
+	db, err := Connect()
+	if err != nil {
+		return plugin, err
+	}
+
+	err = db.Create(&plugin).Error
+	if err != nil {
+		return plugin, err
+	}
+
+	return plugin, nil
+}
+
+func UpdatePluginRelation(id string, relation model.PluginRelation) error {
+	db, err := Connect()
+	if err != nil {
+		return err
+	}
+
+	// Find the existing plugin record by ID
+	var existing model.PluginRelation
+	err = db.First(&existing, "id = ?", id).Error
+	if err != nil {
+		return err
+	}
+
+	// Update the existing plugin record with the new data
+	err = db.Model(&existing).Updates(relation).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeletePluginRelation(id string) (relation model.PluginRelation, err error) {
+	db, err := Connect()
+	if err != nil {
+		return relation, err
+	}
+
+	err = db.First(&relation, "id = ?", id).Error
+	if err != nil {
+		return relation, err
+	}
+
+	err = db.Delete(&relation).Error
+	if err != nil {
+		return relation, err
+	}
+
+	return relation, nil
+}
+
+func CreatePluginRelation(relation model.PluginRelation) (model.PluginRelation, error) {
+	db, err := Connect()
+	if err != nil {
+		return relation, err
+	}
+
+	err = db.Create(&relation).Error
+	if err != nil {
+		return relation, err
+	}
+
+	return relation, nil
+}
+
+func DeletePluginRelationsForPlugin(id string) error {
+	db, err := Connect()
+	if err != nil {
+		return err
+	}
+
+	// Delete all plugin relations that reference the given plugin id.
+	err = db.Where("plugin_id = ?", id).Delete(&model.PluginRelation{}).Error
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

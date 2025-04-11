@@ -21,10 +21,7 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
-	// Set up custom loggers
-	loggers.EA_LOGGER.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-	loggers.PS_LOGGER.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-	loggers.RS_LOGGER.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	loggers.InitSlog()
 
 	// Read broker configuration from environment or fall back to defaults
 	config := brokerConfig{
