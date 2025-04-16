@@ -2,7 +2,9 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/epos-eu/converter-service/loggers"
 	"github.com/epos-eu/converter-service/routes"
@@ -15,11 +17,44 @@ import (
 //go:embed openapi.json
 var openAPISpec []byte
 
+type LogEntry struct {
+	Component string `json:"component"`
+	Time      string `json:"time"`
+	Level     string `json:"level"`
+	Status    int    `json:"status"`
+	Latency   string `json:"latency"`
+	ClientIP  string `json:"client_ip"`
+	Method    string `json:"method"`
+	Path      string `json:"path"`
+	BodySize  int    `json:"body_size"`
+	Error     string `json:"error,omitempty"`
+}
+
 // startServer initializes the Gin engine and starts listening on :8080.
 // The RabbitMQ connection is passed for health checks.
 func startServer(conn *amqp.Connection) {
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
+	gin.DisableConsoleColor()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	// use a custom json logger for gin
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		entry := LogEntry{
+			Component: "API",
+			Time:      param.TimeStamp.Format(time.RFC3339),
+			Level:     "INFO",
+			Status:    param.StatusCode,
+			Latency:   param.Latency.String(),
+			ClientIP:  param.ClientIP,
+			Method:    param.Method,
+			Path:      param.Path,
+			BodySize:  param.BodySize,
+			Error:     param.ErrorMessage,
+		}
+
+		jsonLog, _ := json.Marshal(entry)
+		return string(jsonLog) + "\n"
+	}))
 
 	// Routes
 	v1 := r.Group("/api/converter-service/v1")
@@ -34,9 +69,9 @@ func startServer(conn *amqp.Connection) {
 		// Plugin Relations CRUD endpoints
 		v1.POST("/plugin-relations", routes.CreatePluginRelation)
 		v1.GET("/plugin-relations", routes.GetAllPluginRelations)
-		v1.GET("/plugin-relations/:plugin_id", routes.GetPluginRelation)
-		v1.PUT("/plugin-relations/:plugin_id", routes.UpdatePluginRelation)
-		v1.DELETE("/plugin-relations/:plugin_id", routes.DeletePluginRelation)
+		v1.GET("/plugin-relations/:relation_id", routes.GetPluginRelation)
+		v1.PUT("/plugin-relations/:relation_id", routes.UpdatePluginRelation)
+		v1.DELETE("/plugin-relations/:relation_id", routes.DeletePluginRelation)
 
 		// Enable and disable plugins
 		v1.POST("/plugins/:plugin_id/enable", routes.EnablePlugin)

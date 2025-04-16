@@ -27,7 +27,7 @@ func GetPluginRelation() ([]model.PluginRelation, error) {
 	var listOfPluginRelation []model.PluginRelation
 	err = db.Model(&listOfPluginRelation).Find(&listOfPluginRelation).Error
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return listOfPluginRelation, nil
 }
@@ -62,32 +62,6 @@ func GetPluginRelationById(id string) (model.PluginRelation, error) {
 	return plugin, nil
 }
 
-func GetPluginRelationsByDistributionId(distributionId string) ([]model.PluginRelation, error) {
-	db, err := Connect()
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: ceck if this is necessary
-	// // Get the operation by id
-	// var operation model.Operation
-	// err = db.Model(&operation).Where("uid = ?", operationId).First(&operation).Error
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// Get the plugin relations by operationInstanceId
-	var listOfPluginRelation []model.PluginRelation
-	err = db.Model(&listOfPluginRelation).Where("relation_id = ?", distributionId).Find(&listOfPluginRelation).Error
-	if err != nil {
-		return nil, err
-	}
-	if len(listOfPluginRelation) == 0 {
-		return nil, fmt.Errorf("eror: found 0 plugins related to DistributionId: %s", distributionId)
-	}
-	return listOfPluginRelation, nil
-}
-
 func GetPluginById(pluginId string) (model.Plugin, error) {
 	var plugin model.Plugin
 	db, err := Connect()
@@ -118,21 +92,18 @@ func EnablePlugin(id string, enable bool) error {
 	return nil
 }
 
-func UpdatePlugin(id string, plugin model.Plugin) error {
+// the id of the plugin needs to be set
+func UpdatePlugin(plugin model.Plugin) error {
+	if plugin.ID == "" {
+		return fmt.Errorf("plugin id not set, can't update a plugin without an ID: %+v", plugin)
+	}
 	db, err := Connect()
 	if err != nil {
 		return err
 	}
 
-	// Find the existing plugin record by ID
-	var existing model.Plugin
-	err = db.First(&existing, "id = ?", id).Error
-	if err != nil {
-		return err
-	}
-
 	// Update the existing plugin record with the new data
-	err = db.Model(&existing).Updates(plugin).Error
+	err = db.Model(&plugin).Select("*").Updates(plugin).Error
 	if err != nil {
 		return err
 	}
@@ -189,7 +160,7 @@ func UpdatePluginRelation(id string, relation model.PluginRelation) error {
 	}
 
 	// Update the existing plugin record with the new data
-	err = db.Model(&existing).Updates(relation).Error
+	err = db.Model(&existing).Select("*").Updates(relation).Error
 	if err != nil {
 		return err
 	}
@@ -228,19 +199,4 @@ func CreatePluginRelation(relation model.PluginRelation) (model.PluginRelation, 
 	}
 
 	return relation, nil
-}
-
-func DeletePluginRelationsForPlugin(id string) error {
-	db, err := Connect()
-	if err != nil {
-		return err
-	}
-
-	// Delete all plugin relations that reference the given plugin id.
-	err = db.Where("plugin_id = ?", id).Delete(&model.PluginRelation{}).Error
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
