@@ -19,7 +19,7 @@ func GetPlugins() ([]model.Plugin, error) {
 	return listOfPlugins, nil
 }
 
-func GetPluginRelation() ([]model.PluginRelation, error) {
+func GetAllPluginRelations() ([]model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return nil, err
@@ -146,21 +146,17 @@ func CreatePlugin(plugin model.Plugin) (model.Plugin, error) {
 	return plugin, nil
 }
 
-func UpdatePluginRelation(id string, relation model.PluginRelation) error {
+func UpdatePluginRelation(relation model.PluginRelation) error {
+	if relation.ID == "" {
+		return fmt.Errorf("the id of the relation is not set, can't update a relation without an ID: %+v", relation)
+	}
 	db, err := Connect()
 	if err != nil {
 		return err
 	}
 
-	// Find the existing plugin record by ID
-	var existing model.PluginRelation
-	err = db.First(&existing, "id = ?", id).Error
-	if err != nil {
-		return err
-	}
-
-	// Update the existing plugin record with the new data
-	err = db.Model(&existing).Select("*").Updates(relation).Error
+	// Update the existing relation record with the new data
+	err = db.Model(&relation).Select("*").Updates(relation).Error
 	if err != nil {
 		return err
 	}

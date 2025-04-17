@@ -2,7 +2,6 @@ package routes
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/epos-eu/converter-service/connection"
@@ -13,8 +12,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
-
-const PluginsPath = "./plugins/"
 
 // HTTPError is used just by swag
 type HTTPError struct {
@@ -104,7 +101,8 @@ type Plugin struct {
 //	@Produce		json
 //	@Param			plugin_id	path		string	true	"Plugin ID"
 //	@Param			plugin		body		Plugin	true	"Plugin object"
-//	@Success		200			{object}	Plugin
+//	@Success		200			{object}	model.Plugin
+//	@Success		202			{object}	model.Plugin "Plugin created in DB. Initial sync failed, will be retried by background task."
 //	@Failure		400			{object}	HTTPError
 //	@Failure		404			{object}	HTTPError
 //	@Failure		500			{object}	HTTPError
@@ -156,17 +154,17 @@ func UpdatePlugin(c *gin.Context) {
 		loggers.API_LOGGER.Debug("Plugin update requires clean/sync", "plugin_id", updatedPlugin.ID)
 		err := routine.Clean(updatedPlugin.ID)
 		if err != nil {
-			errMsg := fmt.Sprintf("Plugin updated successfully, but failed during post-update clean step: %v", err)
+			// Plugin updated successfully, but failed during post-update clean step
 			loggers.API_LOGGER.Error("Post-update clean step failed", "plugin_id", updatedPlugin.ID, "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": errMsg})
+			c.JSON(http.StatusAccepted, updatedPlugin)
 			return
 		}
 
 		err = routine.SyncPlugin(updatedPlugin.ID)
 		if err != nil {
-			errMsg := fmt.Sprintf("Plugin updated successfully, but failed during post-update sync step: %v", err)
-			loggers.API_LOGGER.Error("Post-update sync step failed", "plugin_id", updatedPlugin.ID, "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": errMsg})
+			// Plugin updated successfully, but failed during post-update sync step
+			loggers.API_LOGGER.Warn("Post-update sync step failed", "plugin_id", updatedPlugin.ID, "error", err)
+			c.JSON(http.StatusAccepted, updatedPlugin)
 			return
 		}
 		loggers.API_LOGGER.Debug("Post-update clean and sync successful", "plugin_id", updatedPlugin.ID)
