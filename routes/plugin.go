@@ -218,7 +218,7 @@ func DeletePlugin(c *gin.Context) {
 //	@Tags			Converter Service
 //	@Accept			json
 //	@Produce		json
-//	@Param			plugin	body		Plugin	true	"Plugin object for creation"
+//	@Param			plugin	body		Plugin			true	"Plugin object for creation"
 //	@Success		201		{object}	model.Plugin	"Plugin created in DB. Sync succeded."
 //	@Success		202		{object}	model.Plugin	"Plugin created in DB. Initial sync failed, will be retried by background task."
 //	@Failure		400		{object}	HTTPError
@@ -261,6 +261,7 @@ func CreatePlugin(c *gin.Context) {
 		loggers.API_LOGGER.Warn("Initial SyncPlugin failed after DB creation. Will rely on cron task.", "plugin_id", createdPlugin.ID, "error", err)
 		// sending accepted to say that the request was accepted but the installation is not complete
 		c.JSON(http.StatusAccepted, createdPlugin)
+		return
 	}
 
 	loggers.API_LOGGER.Info("Plugin created successfully", "plugin_id", createdPlugin.ID)
