@@ -1,12 +1,12 @@
 package routine
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"log"
-
 )
 
 var endpoint = ""
@@ -25,7 +25,7 @@ func Clean(id string) error {
 		return fmt.Errorf("error constructing clean URL: %w", err)
 	}
 
-	resp, err := http.Get(path)
+	resp, err := http.Post(path, "application/json", bytes.NewBuffer([]byte{}))
 	if err != nil {
 		return fmt.Errorf("error performing GET request to %s: %w", path, err)
 	}
@@ -44,7 +44,7 @@ func SyncPlugin(id string) error {
 		return fmt.Errorf("error constructing sync URL: %w", err)
 	}
 
-	resp, err := http.Get(path)
+	resp, err := http.Post(path, "application/json", bytes.NewBuffer([]byte{}))
 	if err != nil {
 		return fmt.Errorf("error performing GET request to %s: %w", path, err)
 	}
@@ -63,7 +63,7 @@ func Sync() error {
 		return fmt.Errorf("error constructing sync URL: %w", err)
 	}
 
-	resp, err := http.Get(path)
+	resp, err := http.Post(path, "application/json", bytes.NewBuffer([]byte{}))
 	if err != nil {
 		return fmt.Errorf("error performing GET request to %s: %w", path, err)
 	}
