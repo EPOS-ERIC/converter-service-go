@@ -50,7 +50,7 @@ func main() {
 	externalAccessMsgs, err := ch.Consume(
 		externalAccessQueue.Name,
 		"",
-		false,
+		true,
 		false,
 		false,
 		false,
@@ -73,7 +73,7 @@ func main() {
 	resourcesServiceMsgs, err := ch.Consume(
 		resourcesServiceQueue.Name,
 		"",
-		false,
+		true,
 		false,
 		false,
 		false,

@@ -27,10 +27,6 @@ func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 				loggers.EA_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			if ackErr := m.Ack(true); ackErr != nil {
-				loggers.EA_LOGGER.Error("Error acknowledging message", "error", ackErr)
-				continue
-			}
 			loggers.EA_LOGGER.Info("Message handled with error")
 			continue
 		}
@@ -53,10 +49,6 @@ func handleExternalAccessMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		if ackErr := m.Ack(true); ackErr != nil {
-			loggers.EA_LOGGER.Error("Error acknowledging message", "error", ackErr)
-			continue
-		}
 		loggers.EA_LOGGER.Info("Message handled")
 	}
 }
@@ -93,10 +85,6 @@ func handleProcessingServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		if ackErr := m.Ack(true); ackErr != nil {
-			loggers.PS_LOGGER.Error("Error acknowledging message", "error", ackErr)
-			continue
-		}
 		loggers.PS_LOGGER.Info("Message handled")
 	}
 }
@@ -136,10 +124,6 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 				loggers.RS_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			if ackErr := m.Ack(true); ackErr != nil {
-				loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
-				continue
-			}
 			loggers.RS_LOGGER.Info("Message handled with error")
 			continue
 		}
@@ -153,10 +137,6 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 				loggers.RS_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			if ackErr := m.Ack(true); ackErr != nil {
-				loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
-				continue
-			}
 			loggers.RS_LOGGER.Info("Message handled with error")
 			continue
 		}
@@ -186,10 +166,6 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 				loggers.RS_LOGGER.Error("Failed to publish the error message", "error", err)
 			}
 
-			if ackErr := m.Ack(true); ackErr != nil {
-				loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
-				continue
-			}
 			loggers.RS_LOGGER.Info("Message handled with error")
 			continue
 		}
@@ -213,10 +189,6 @@ func handleResourcesServiceMsgs(ch *amqp.Channel, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		if ackErr := m.Ack(true); ackErr != nil {
-			loggers.RS_LOGGER.Error("Error acknowledging message", "error", ackErr)
-			continue
-		}
 		loggers.RS_LOGGER.Info("Message handled")
 	}
 }
