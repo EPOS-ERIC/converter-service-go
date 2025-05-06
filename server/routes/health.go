@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/epos-eu/converter-service/connection"
+	"github.com/epos-eu/converter-service/db"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -17,7 +17,7 @@ type HealthHandler struct {
 func (h *HealthHandler) Health(c *gin.Context) {
 	err := health(h.RabbitConn)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Unhealthy: %w", err)
+		c.String(http.StatusInternalServerError, "Unhealthy: ", err.Error())
 		return
 	} else {
 		c.String(http.StatusOK, "Healthy")
@@ -34,7 +34,7 @@ func health(rabbitConn *amqp.Connection) error {
 	}
 
 	// Check the connection to the db
-	_, err = connection.Connect()
+	_, err = db.Connect()
 	if err != nil {
 		return fmt.Errorf("can't connect to database")
 	}

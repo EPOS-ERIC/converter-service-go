@@ -14,7 +14,7 @@ setup:
 .PHONY:
 gen-docs: setup swag-format
 	@echo "Generating Swagger 2.0 documentation..."
-	swag init -g server.go
+	swag init -g ./server/server.go
 
 .PHONY:
 swag-format:
@@ -24,7 +24,7 @@ swag-format:
 .PHONY:
 convert-swagger: setup
 	@echo "Converting Swagger 2.0 to OpenAPI 3.0..."
-	node_modules/.bin/swagger2openapi ./docs/swagger.json -o ./openapi.json; \
+	node_modules/.bin/swagger2openapi ./docs/swagger.json -o ./server/openapi.json; \
 
 .PHONY:
 build-go: gen-docs convert-swagger clean
@@ -38,6 +38,6 @@ clean:
 
 .PHONY:
 clean-all: clean
-	rm -f ./openapi.json
+	rm -f ./server/openapi.json
 	@echo "Removing npm modules..."
 	rm -rf node_modules

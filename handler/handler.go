@@ -7,31 +7,35 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/epos-eu/converter-service/connection"
+	"github.com/epos-eu/converter-service/db"
 	"github.com/epos-eu/converter-service/loggers"
 )
 
-func Handler(body string) (string, error) {
+var logger = loggers.EA_LOGGER
+
+func ExternalAccessHandler(bytes []byte) ([]byte, error) {
+	body := string(bytes)
+
 	var message Message
 
-	loggers.EA_LOGGER.Debug("Handling message", "message", body)
+	logger.Debug("Handling message", "message", body)
 
 	if err := json.Unmarshal([]byte(body), &message); err != nil {
-		return "", fmt.Errorf("error converting payload: %v", err)
+		return nil, fmt.Errorf("error converting payload: %v", err)
 	}
 
 	// validate the message
 	if message.Payload == "" {
-		return "", fmt.Errorf("error getting the payload: the payload is empty")
+		return nil, fmt.Errorf("error getting the payload: the payload is empty")
 	}
 	// both the distributionId and the pluginId must be specified
-	if (message.Parameters.DistributionId == "" || message.Parameters.PluginId == "") {
-		return "", fmt.Errorf("error: both the distributionId and the pluginId must be specified. distributionId: %s. pluginId: %s", message.Parameters.DistributionId, message.Parameters.PluginId)
+	if message.Parameters.DistributionId == "" || message.Parameters.PluginId == "" {
+		return nil, fmt.Errorf("error: both the distributionId and the pluginId must be specified. distributionId: %s. pluginId: %s", message.Parameters.DistributionId, message.Parameters.PluginId)
 	}
 
-	plugin, err := connection.GetPluginById(message.Parameters.PluginId)
+	plugin, err := db.GetPluginById(message.Parameters.PluginId)
 	if err != nil {
-		return "", fmt.Errorf("error getting plugins: %v", err)
+		return nil, fmt.Errorf("error getting plugins: %v", err)
 	}
 
 	log.Printf("Executing plugin: %+v", plugin)
@@ -62,8 +66,56 @@ func Handler(body string) (string, error) {
 		log.Printf("error: unknown runtime: %v", plugin.Runtime)
 		response, err := json.Marshal("{}")
 		if err != nil {
-			return "", fmt.Errorf("error on creating json: %v", err)
+			return nil, fmt.Errorf("error on creating json: %v", err)
 		}
-		return string(response), nil
+		return response, nil
 	}
+}
+
+type relation struct {
+	PluginID     string `json:"pluginId"`
+	InputFormat  string `json:"inputFormat"`
+	OutputFormat string `json:"outputFormat"`
+}
+
+type plugin struct {
+	DistributionID string     `json:"distributionId"`
+	Relations      []relation `json:"relations"`
+}
+
+type resourcesMsg struct {
+	Plugins string `json:"plugins"`
+}
+
+func ResourcesServiceHandler(bytes []byte) ([]byte, error) {
+	var resourcesMsg resourcesMsg
+	err := json.Unmarshal(bytes, &resourcesMsg)
+	if err != nil || resourcesMsg.Plugins != "all" {
+		return nil, fmt.Errorf("failed to process the message: %w", err)
+	}
+
+	// get all plugin relations
+	relations, err := db.GetPluginRelationForEnabledPlugins()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get plugin relations: %w", err)
+	}
+	// group them by OperationID
+	operations := make(map[string][]relation)
+	for _, r := range relations {
+		operations[r.RelationID] = append(operations[r.RelationID], relation{
+			PluginID:     r.PluginID,
+			InputFormat:  r.InputFormat,
+			OutputFormat: r.OutputFormat,
+		})
+	}
+
+	responseStr := make([]plugin, 0)
+	for k, v := range operations {
+		responseStr = append(responseStr, plugin{
+			DistributionID: k,
+			Relations:      v,
+		})
+	}
+
+	return json.Marshal(responseStr)
 }

@@ -3,7 +3,7 @@ package routes
 import (
 	"net/http"
 
-	"github.com/epos-eu/converter-service/connection"
+	"github.com/epos-eu/converter-service/db"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +21,7 @@ import (
 func EnablePlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
 
-	err := connection.EnablePlugin(id, true)
+	err := db.EnablePlugin(id, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -44,7 +44,7 @@ func EnablePlugin(c *gin.Context) {
 func DisablePlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
 
-	err := connection.EnablePlugin(id, false)
+	err := db.EnablePlugin(id, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

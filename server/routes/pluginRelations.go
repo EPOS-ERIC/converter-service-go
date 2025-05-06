@@ -4,9 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/epos-eu/converter-service/connection"
 	"github.com/epos-eu/converter-service/dao/model"
-	"github.com/epos-eu/converter-service/loggers"
+	"github.com/epos-eu/converter-service/db"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,22 +22,22 @@ import (
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugin-relations [get]
 func GetAllPluginRelations(c *gin.Context) {
-	loggers.API_LOGGER.Debug("GetAllPluginRelations request received")
+	logger.Debug("GetAllPluginRelations request received")
 
-	plugins, err := connection.GetAllPluginRelations()
+	plugins, err := db.GetAllPluginRelations()
 	if err != nil {
-		loggers.API_LOGGER.Error("Failed to get plugin relations from DB", "error", err)
+		logger.Error("Failed to get plugin relations from DB", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plugin relations"})
 		return
 	}
 
 	if len(plugins) == 0 {
-		loggers.API_LOGGER.Warn("No plugin relations found in DB")
+		logger.Warn("No plugin relations found in DB")
 		c.JSON(http.StatusNotFound, gin.H{"error": "No plugin relation found"})
 		return
 	}
 
-	loggers.API_LOGGER.Debug("GetAllPluginRelations request successful", "count", len(plugins))
+	logger.Debug("GetAllPluginRelations request successful", "count", len(plugins))
 	c.JSON(http.StatusOK, plugins)
 }
 
@@ -55,21 +54,21 @@ func GetAllPluginRelations(c *gin.Context) {
 //	@Router			/plugin-relations/{relation_id} [get]
 func GetPluginRelation(c *gin.Context) {
 	id := c.Param("relation_id")
-	loggers.API_LOGGER.Debug("GetPluginRelation request received", "relation_id", id)
+	logger.Debug("GetPluginRelation request received", "relation_id", id)
 
-	plugin, err := connection.GetPluginRelationById(id)
+	plugin, err := db.GetPluginRelationById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			loggers.API_LOGGER.Warn("Plugin relation not found in DB", "relation_id", id)
+			logger.Warn("Plugin relation not found in DB", "relation_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin relation found with relation_id: " + id})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to get plugin relation from DB", "relation_id", id, "error", err)
+		logger.Error("Failed to get plugin relation from DB", "relation_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plugin relation"})
 		return
 	}
 
-	loggers.API_LOGGER.Debug("GetPluginRelation request successful", "relation_id", id)
+	logger.Debug("GetPluginRelation request successful", "relation_id", id)
 	c.JSON(http.StatusOK, plugin)
 }
 
@@ -96,24 +95,24 @@ type PluginRelationUpdate struct {
 //	@Router			/plugin-relations/{relation_id} [put]
 func UpdatePluginRelation(c *gin.Context) {
 	id := c.Param("relation_id")
-	loggers.API_LOGGER.Debug("UpdatePluginRelation request received", "relation_id", id)
+	logger.Debug("UpdatePluginRelation request received", "relation_id", id)
 
 	var relationUpdate PluginRelationUpdate
 	if err := c.ShouldBindJSON(&relationUpdate); err != nil {
-		loggers.API_LOGGER.Warn("Failed to bind JSON for plugin relation update", "relation_id", id, "error", err)
+		logger.Warn("Failed to bind JSON for plugin relation update", "relation_id", id, "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
 		return
 	}
 
 	// get current relation
-	relation, err := connection.GetPluginRelationById(id)
+	relation, err := db.GetPluginRelationById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			loggers.API_LOGGER.Warn("Plugin relation to update not found in DB", "relation_id", id)
+			logger.Warn("Plugin relation to update not found in DB", "relation_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin relation found with relation_id: " + id})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to get plugin relation for update", "relation_id", id, "error", err)
+		logger.Error("Failed to get plugin relation for update", "relation_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve existing plugin relation"})
 		return
 	}
@@ -121,26 +120,26 @@ func UpdatePluginRelation(c *gin.Context) {
 	// merge and validate
 	newRelation := mergePluginRelationUpdate(relationUpdate, relation)
 	if err := newRelation.Validate(); err != nil {
-		loggers.API_LOGGER.Warn("Plugin relation validation failed on update", "relation_id", id, "error", err)
+		logger.Warn("Plugin relation validation failed on update", "relation_id", id, "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
 		return
 	}
 
 	// update (using the merged and validated 'newRelation')
-	err = connection.UpdatePluginRelation(newRelation)
+	err = db.UpdatePluginRelation(newRelation)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// This case might be redundant if GetPluginRelationById succeeded earlier, but keep for safety
-			loggers.API_LOGGER.Warn("Plugin relation vanished before update completed", "relation_id", id)
+			logger.Warn("Plugin relation vanished before update completed", "relation_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin relation found with relation_id: " + id})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to update plugin relation in DB", "relation_id", id, "error", err)
+		logger.Error("Failed to update plugin relation in DB", "relation_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin relation update"})
 		return
 	}
 
-	loggers.API_LOGGER.Info("Plugin relation updated successfully", "relation_id", id)
+	logger.Info("Plugin relation updated successfully", "relation_id", id)
 	c.JSON(http.StatusOK, newRelation)
 }
 
@@ -157,21 +156,21 @@ func UpdatePluginRelation(c *gin.Context) {
 //	@Router			/plugin-relations/{relation_id} [delete]
 func DeletePluginRelation(c *gin.Context) {
 	id := c.Param("relation_id")
-	loggers.API_LOGGER.Debug("DeletePluginRelation request received", "relation_id", id)
+	logger.Debug("DeletePluginRelation request received", "relation_id", id)
 
-	deletedRelation, err := connection.DeletePluginRelation(id)
+	deletedRelation, err := db.DeletePluginRelation(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			loggers.API_LOGGER.Warn("Plugin relation to delete not found in DB", "relation_id", id)
+			logger.Warn("Plugin relation to delete not found in DB", "relation_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plugin relation not found"})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to delete plugin relation from DB", "relation_id", id, "error", err)
+		logger.Error("Failed to delete plugin relation from DB", "relation_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete plugin relation"})
 		return
 	}
 
-	loggers.API_LOGGER.Info("Plugin relation deleted successfully", "relation_id", deletedRelation.ID)
+	logger.Info("Plugin relation deleted successfully", "relation_id", deletedRelation.ID)
 	c.JSON(http.StatusOK, deletedRelation)
 }
 
@@ -188,11 +187,11 @@ func DeletePluginRelation(c *gin.Context) {
 //	@Failure		500				{object}	HTTPError
 //	@Router			/plugin-relations [post]
 func CreatePluginRelation(c *gin.Context) {
-	loggers.API_LOGGER.Debug("CreatePluginRelation request received")
+	logger.Debug("CreatePluginRelation request received")
 
 	var newRelationData PluginRelationUpdate
 	if err := c.ShouldBindJSON(&newRelationData); err != nil {
-		loggers.API_LOGGER.Warn("Failed to bind JSON for plugin relation creation", "error", err)
+		logger.Warn("Failed to bind JSON for plugin relation creation", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
 		return
 	}
@@ -204,20 +203,20 @@ func CreatePluginRelation(c *gin.Context) {
 
 	// Validate the relation
 	if err := relationToCreate.Validate(); err != nil {
-		loggers.API_LOGGER.Warn("Plugin relation validation failed on create", "error", err)
+		logger.Warn("Plugin relation validation failed on create", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
 		return
 	}
 
 	// Create in DB
-	createdRelation, err := connection.CreatePluginRelation(relationToCreate)
+	createdRelation, err := db.CreatePluginRelation(relationToCreate)
 	if err != nil {
-		loggers.API_LOGGER.Error("Failed to create plugin relation in DB", "error", err)
+		logger.Error("Failed to create plugin relation in DB", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save new plugin relation"})
 		return
 	}
 
-	loggers.API_LOGGER.Info("Plugin relation created successfully", "relation_id", createdRelation.ID)
+	logger.Info("Plugin relation created successfully", "relation_id", createdRelation.ID)
 	c.JSON(http.StatusCreated, createdRelation)
 }
 

@@ -4,9 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/epos-eu/converter-service/connection"
 	"github.com/epos-eu/converter-service/dao/model"
-	"github.com/epos-eu/converter-service/loggers"
+	"github.com/epos-eu/converter-service/db"
 	"github.com/epos-eu/converter-service/routine"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,22 +29,22 @@ type HTTPError struct {
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugins [get]
 func GetAllPlugins(c *gin.Context) {
-	loggers.API_LOGGER.Debug("GetAllPlugins request received")
+	logger.Debug("GetAllPlugins request received")
 
-	plugins, err := connection.GetPlugins()
+	plugins, err := db.GetPlugins()
 	if err != nil {
-		loggers.API_LOGGER.Error("Failed to get plugins from DB", "error", err)
+		logger.Error("Failed to get plugins from DB", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plugins"})
 		return
 	}
 
 	if len(plugins) == 0 {
-		loggers.API_LOGGER.Warn("No plugins found in DB")
+		logger.Warn("No plugins found in DB")
 		c.JSON(http.StatusNotFound, gin.H{"error": "No plugins found"})
 		return
 	}
 
-	loggers.API_LOGGER.Debug("GetAllPlugins request successful", "count", len(plugins))
+	logger.Debug("GetAllPlugins request successful", "count", len(plugins))
 	c.JSON(http.StatusOK, plugins)
 }
 
@@ -62,21 +61,21 @@ func GetAllPlugins(c *gin.Context) {
 //	@Router			/plugins/{plugin_id} [get]
 func GetPlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
-	loggers.API_LOGGER.Debug("GetPlugin request received", "plugin_id", id)
+	logger.Debug("GetPlugin request received", "plugin_id", id)
 
-	plugin, err := connection.GetPluginById(id)
+	plugin, err := db.GetPluginById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			loggers.API_LOGGER.Warn("Plugin not found in DB", "plugin_id", id)
+			logger.Warn("Plugin not found in DB", "plugin_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin found with plugin_id: " + id})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to get plugin from DB", "plugin_id", id, "error", err)
+		logger.Error("Failed to get plugin from DB", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plugin"})
 		return
 	}
 
-	loggers.API_LOGGER.Debug("GetPlugin request successful", "plugin_id", id)
+	logger.Debug("GetPlugin request successful", "plugin_id", id)
 	c.JSON(http.StatusOK, plugin)
 }
 
@@ -109,24 +108,24 @@ type Plugin struct {
 //	@Router			/plugins/{plugin_id} [put]
 func UpdatePlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
-	loggers.API_LOGGER.Debug("UpdatePlugin request received", "plugin_id", id)
+	logger.Debug("UpdatePlugin request received", "plugin_id", id)
 
 	var pluginUpdate Plugin
 	if err := c.ShouldBindJSON(&pluginUpdate); err != nil {
-		loggers.API_LOGGER.Warn("Failed to bind JSON for plugin update", "plugin_id", id, "error", err)
+		logger.Warn("Failed to bind JSON for plugin update", "plugin_id", id, "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
 		return
 	}
 
 	// get the current version of this plugin
-	plugin, err := connection.GetPluginById(id)
+	plugin, err := db.GetPluginById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			loggers.API_LOGGER.Warn("Plugin to update not found in DB", "plugin_id", id)
+			logger.Warn("Plugin to update not found in DB", "plugin_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin found with plugin_id: " + id})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to get plugin for update", "plugin_id", id, "error", err)
+		logger.Error("Failed to get plugin for update", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve existing plugin"})
 		return
 	}
@@ -134,28 +133,28 @@ func UpdatePlugin(c *gin.Context) {
 	// merge the two to make a new complete plugin with the new updates
 	updatedPlugin := mergePluginUpdate(pluginUpdate, plugin)
 	if err = updatedPlugin.Validate(); err != nil {
-		loggers.API_LOGGER.Warn("Plugin validation failed on update", "plugin_id", id, "error", err)
+		logger.Warn("Plugin validation failed on update", "plugin_id", id, "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
 		return
 	}
 
 	// update the plugin in the db
-	if err := connection.UpdatePlugin(updatedPlugin); err != nil {
-		loggers.API_LOGGER.Error("Failed to update plugin in DB", "plugin_id", id, "error", err)
+	if err := db.UpdatePlugin(updatedPlugin); err != nil {
+		logger.Error("Failed to update plugin in DB", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin update"})
 		return
 	}
 
-	loggers.API_LOGGER.Debug("Plugin DB record updated successfully", "plugin_id", updatedPlugin.ID)
+	logger.Debug("Plugin DB record updated successfully", "plugin_id", updatedPlugin.ID)
 
 	// clean and sync if necessary
 	needsSync := pluginUpdate.Version != nil || pluginUpdate.VersionType != nil || pluginUpdate.Repository != nil
 	if needsSync && updatedPlugin.Installed {
-		loggers.API_LOGGER.Debug("Plugin update requires clean/sync", "plugin_id", updatedPlugin.ID)
+		logger.Debug("Plugin update requires clean/sync", "plugin_id", updatedPlugin.ID)
 		err := routine.Clean(updatedPlugin.ID)
 		if err != nil {
 			// Plugin updated successfully, but failed during post-update clean step
-			loggers.API_LOGGER.Error("Post-update clean step failed", "plugin_id", updatedPlugin.ID, "error", err)
+			logger.Error("Post-update clean step failed", "plugin_id", updatedPlugin.ID, "error", err)
 			c.JSON(http.StatusAccepted, updatedPlugin)
 			return
 		}
@@ -163,14 +162,14 @@ func UpdatePlugin(c *gin.Context) {
 		err = routine.SyncPlugin(updatedPlugin.ID)
 		if err != nil {
 			// Plugin updated successfully, but failed during post-update sync step
-			loggers.API_LOGGER.Warn("Post-update sync step failed", "plugin_id", updatedPlugin.ID, "error", err)
+			logger.Warn("Post-update sync step failed", "plugin_id", updatedPlugin.ID, "error", err)
 			c.JSON(http.StatusAccepted, updatedPlugin)
 			return
 		}
-		loggers.API_LOGGER.Debug("Post-update clean and sync successful", "plugin_id", updatedPlugin.ID)
+		logger.Debug("Post-update clean and sync successful", "plugin_id", updatedPlugin.ID)
 	}
 
-	loggers.API_LOGGER.Info("Plugin updated successfully", "plugin_id", updatedPlugin.ID, "sync_required", needsSync)
+	logger.Info("Plugin updated successfully", "plugin_id", updatedPlugin.ID, "sync_required", needsSync)
 	c.JSON(http.StatusOK, updatedPlugin)
 }
 
@@ -187,17 +186,17 @@ func UpdatePlugin(c *gin.Context) {
 //	@Router			/plugins/{plugin_id} [delete]
 func DeletePlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
-	loggers.API_LOGGER.Debug("DeletePlugin request received", "plugin_id", id)
+	logger.Debug("DeletePlugin request received", "plugin_id", id)
 
 	// Delete the plugin from the database
-	deletedPlugin, err := connection.DeletePlugin(id)
+	deletedPlugin, err := db.DeletePlugin(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			loggers.API_LOGGER.Warn("Plugin to delete not found in DB", "plugin_id", id)
+			logger.Warn("Plugin to delete not found in DB", "plugin_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plugin not found"})
 			return
 		}
-		loggers.API_LOGGER.Error("Failed to delete plugin from DB", "plugin_id", id, "error", err)
+		logger.Error("Failed to delete plugin from DB", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete plugin from database"})
 		return
 	}
@@ -205,7 +204,7 @@ func DeletePlugin(c *gin.Context) {
 	// NOTE: see if this is ok or if it is better to clean manually
 	// the plugin dir will be deleted by the cron task automatically
 
-	loggers.API_LOGGER.Info("Plugin deleted successfully", "plugin_id", deletedPlugin.ID)
+	logger.Info("Plugin deleted successfully", "plugin_id", deletedPlugin.ID)
 	c.JSON(http.StatusOK, deletedPlugin)
 }
 
@@ -223,11 +222,11 @@ func DeletePlugin(c *gin.Context) {
 //	@Failure		500		{object}	HTTPError
 //	@Router			/plugins [post]
 func CreatePlugin(c *gin.Context) {
-	loggers.API_LOGGER.Debug("CreatePlugin request received")
+	logger.Debug("CreatePlugin request received")
 
 	var newPlugin Plugin
 	if err := c.ShouldBindJSON(&newPlugin); err != nil {
-		loggers.API_LOGGER.Warn("Failed to bind JSON for plugin creation", "error", err)
+		logger.Warn("Failed to bind JSON for plugin creation", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
 		return
 	}
@@ -239,15 +238,15 @@ func CreatePlugin(c *gin.Context) {
 	})
 
 	if err := pluginToCreate.Validate(); err != nil {
-		loggers.API_LOGGER.Warn("Plugin validation failed on create", "error", err)
+		logger.Warn("Plugin validation failed on create", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
 		return
 	}
 
 	// Create in DB
-	createdPlugin, err := connection.CreatePlugin(pluginToCreate)
+	createdPlugin, err := db.CreatePlugin(pluginToCreate)
 	if err != nil {
-		loggers.API_LOGGER.Error("Failed to create plugin in DB", "error", err)
+		logger.Error("Failed to create plugin in DB", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save new plugin"})
 		return
 	}
@@ -256,13 +255,13 @@ func CreatePlugin(c *gin.Context) {
 	err = routine.SyncPlugin(createdPlugin.ID)
 	if err != nil {
 		// handle the sync error
-		loggers.API_LOGGER.Warn("Initial SyncPlugin failed after DB creation. Will rely on cron task.", "plugin_id", createdPlugin.ID, "error", err)
+		logger.Warn("Initial SyncPlugin failed after DB creation. Will rely on cron task.", "plugin_id", createdPlugin.ID, "error", err)
 		// sending accepted to say that the request was accepted but the installation is not complete
 		c.JSON(http.StatusAccepted, createdPlugin)
 		return
 	}
 
-	loggers.API_LOGGER.Info("Plugin created successfully", "plugin_id", createdPlugin.ID)
+	logger.Info("Plugin created successfully", "plugin_id", createdPlugin.ID)
 	c.JSON(http.StatusCreated, createdPlugin)
 }
 

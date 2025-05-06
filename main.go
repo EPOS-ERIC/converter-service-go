@@ -1,92 +1,29 @@
 package main
 
 import (
-	"log"
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/epos-eu/converter-service/loggers"
+	"github.com/epos-eu/converter-service/rabbit"
+	"github.com/epos-eu/converter-service/server"
 )
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Panicf("%s: %s", msg, err)
-	}
-}
-
-func getEnv(key, fallback string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	return fallback
-}
-
 func main() {
-	loggers.InitSlog()
+	// context to handle shutdown gracefully
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// Read broker configuration from environment or fall back to defaults
-	config := brokerConfig{
-		host:     getEnv("BROKER_HOST", "rabbitmq"),
-		user:     getEnv("BROKER_USERNAME", "changeme"),
-		password: getEnv("BROKER_PASSWORD", "changeme"),
-		vhost:    getEnv("BROKER_VHOST", "changeme"),
+	broker := rabbit.NewBroker()
+	// start the broker handling
+	err := broker.Start()
+	if err != nil {
+		panic(err)
 	}
+	// start to monitor the connection and automatically restart it (in place)
+	go broker.Monitor(ctx)
 
-	// Connect to RabbitMQ
-	conn, err := connectToBroker(config)
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
-
-	// Open channel
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
-
-	// Initialize queues
-	externalAccessQueue := initExternalAccessQueue(ch)
-	// processingServiceQueue := initProcessingServiceQueue(ch) // TODO
-	resourcesServiceQueue := initResourcesServiceQueue(ch)
-
-	// Consumers
-	externalAccessMsgs, err := ch.Consume(
-		externalAccessQueue.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to register External Access consumer")
-
-	// TODO
-	// processingServiceMsgs, err := ch.Consume(
-	// 	processingServiceQueue.Name,
-	// 	"",
-	// 	false,
-	// 	false,
-	// 	false,
-	// 	false,
-	// 	nil,
-	// )
-	// failOnError(err, "Failed to register Processing Service consumer")
-
-	resourcesServiceMsgs, err := ch.Consume(
-		resourcesServiceQueue.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to register Resources Service consumer")
-
-	// Consume from each queue
-	go handleExternalAccessMsgs(ch, externalAccessMsgs)
-	// go handleProcessingServiceMsgs(ch, processingServiceMsgs)	// TODO
-	go handleResourcesServiceMsgs(ch, resourcesServiceMsgs)
-
-	go startServer(conn)
-
-	select {}
+	// start the server (blocking)
+	server.StartServer(broker)
 }

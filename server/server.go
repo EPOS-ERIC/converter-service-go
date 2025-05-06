@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	_ "embed"
@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/epos-eu/converter-service/loggers"
-	"github.com/epos-eu/converter-service/routes"
+	"github.com/epos-eu/converter-service/rabbit"
+	"github.com/epos-eu/converter-service/server/routes"
 	"github.com/gin-gonic/gin"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Embed the OpenAPI 3.0 JSON specification file
@@ -32,7 +31,7 @@ type LogEntry struct {
 
 // startServer initializes the Gin engine and starts listening on :8080.
 // The RabbitMQ connection is passed for health checks.
-func startServer(conn *amqp.Connection) {
+func StartServer(broker *rabbit.BrokerConfig) {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
 	r := gin.New()
@@ -79,7 +78,7 @@ func startServer(conn *amqp.Connection) {
 
 		// Health check injecting the RabbitMQ connection
 		healthHandler := routes.HealthHandler{
-			RabbitConn: conn,
+			RabbitConn: broker.Conn,
 		}
 		v1.GET("/actuator/health", healthHandler.Health)
 
@@ -96,6 +95,6 @@ func startServer(conn *amqp.Connection) {
 
 	err := r.Run(":8080")
 	if err != nil {
-		loggers.API_LOGGER.Error("Error initializing server", "error", err)
+		panic(err)
 	}
 }

@@ -7,50 +7,49 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/epos-eu/converter-service/loggers"
 )
 
-func executeCommand(payload string, cmd *exec.Cmd) (string, error) {
+func executeCommand(payload string, cmd *exec.Cmd) ([]byte, error) {
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("error getting current directory: %w", err)
+		return nil, fmt.Errorf("error getting current directory: %w", err)
 	}
 
 	// Generate random unique names for the temp input and output files
 	tmpDir, inputFile, outputFile, err := createTempFiles(currentDir, payload)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer cleanupTempFiles(tmpDir)
 
+	// the last two arguments of an executable command have to be the input and the output files
 	cmd.Args = append(cmd.Args, inputFile, outputFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		// log the head of the payload that could not be converted for debugging purposes
-		return "", fmt.Errorf("error executing the plugin: %w\nHead of payload:\n%v", err, getHead(payload, 200))
+		return nil, fmt.Errorf("error executing the plugin: %w\nHead of payload:\n%v", err, getHead(payload, 200))
 	}
 
 	output, err := os.ReadFile(outputFile)
 	if err != nil {
-		return "", fmt.Errorf("error reading output file: %w", err)
+		return nil, fmt.Errorf("error reading output file: %w", err)
 	}
 
 	var outputMap map[string]any
 	if err := json.Unmarshal(output, &outputMap); err != nil {
-		return "", fmt.Errorf("error parsing output json: %w", err)
+		return nil, fmt.Errorf("error parsing output json: %w", err)
 	}
 
 	response := Response{outputMap}
 
 	jsonStr, err := json.Marshal(response)
 	if err != nil {
-		return "", fmt.Errorf("error converting output to json: %w", err)
+		return nil, fmt.Errorf("error converting output to json: %w", err)
 	}
 
-	return string(jsonStr), nil
+	return jsonStr, nil
 }
 
 func createTempFiles(dir, payload string) (string, string, string, error) {
@@ -78,7 +77,7 @@ func createTempFiles(dir, payload string) (string, string, string, error) {
 func cleanupTempFiles(files ...string) {
 	for _, file := range files {
 		if err := os.RemoveAll(file); err != nil {
-			loggers.EA_LOGGER.Error("error removing temp dir", "error", err)
+			logger.Error("error removing temp dir", "error", err)
 		}
 	}
 }
