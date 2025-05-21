@@ -40,8 +40,8 @@ func GetPluginRelationForEnabledPlugins() ([]model.PluginRelation, error) {
 	var listOfPluginRelation []model.PluginRelation
 	// Join the plugins table and filter where plugins.enabled and plugins.installed are true.
 	err = db.
-		Joins("JOIN plugin ON plugin.id = plugin_relations.plugin_id").
-		Where("plugin.enabled = ? AND plugin.installed = ?", true, true).
+		Joins("JOIN converter_catalogue.plugin ON converter_catalogue.plugin.id = converter_catalogue.plugin_relations.plugin_id").
+		Where("converter_catalogue.plugin.enabled = ? AND converter_catalogue.plugin.installed = ?", true, true).
 		Find(&listOfPluginRelation).Error
 	if err != nil {
 		return nil, err
