@@ -16,6 +16,7 @@ A converter plugin is only necessary for services whose payloads are not nativel
 - **GeoJSON**
 - **CoverageJSON (CovJSON)**
 - **Extended GeoJSON (EPOS GeoJSON)**: a custom extension of the GeoJSON format that adds specific properties to enhance data visualization in the EPOS GUI.
+  
   If a service returns data in any of the supported formats listed above, **no conversion is required**. The converter system is specifically intended to make external services interoperable with the EPOS ecosystem **without enforcing any data standard**. It acts as a bridge for integrating services that provide payloads in alternative or proprietary formats by converting them into a format the GUI can handle.
 
 ---
@@ -26,6 +27,7 @@ The Converter system is composed of two microservices:
 
 - **converter-routine**
 - **converter-service**
+  
   These services work together to manage plugin lifecycle, execution, and integration with the broader EPOS system.
 
 ---
