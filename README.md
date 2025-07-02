@@ -1,93 +1,113 @@
-# converter-service
+## Converter Component
 
+### Overview
 
+The **Converter** is a key architectural component responsible for transforming payloads retrieved from external services into formats interpretable by the EPOS GUI. Given that EPOS neither controls these external services nor enforces a fixed payload format, the Converter ensures flexibility by enabling on-the-fly conversion of data before it reaches the GUI layer.
+This conversion is handled dynamically at request time, allowing the frontend to visualize data regardless of the original payload structure. The Converter achieves this by using a plugin-based system where each plugin encapsulates the logic required to transform a specific data format.
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+### Converter Applicability
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+A converter plugin is only necessary for services whose payloads are not natively supported by the EPOS GUI. As of now, the GUI fully supports the following formats or service types:
 
-## Add your files
+- **WMS (Web Map Service)**
+- **WFS (Web Feature Service)**
+- **GeoJSON**
+- **CoverageJSON (CovJSON)**
+- **Extended GeoJSON (EPOS GeoJSON)**: a custom extension of the GeoJSON format that adds specific properties to enhance data visualization in the EPOS GUI.
+  If a service returns data in any of the supported formats listed above, **no conversion is required**. The converter system is specifically intended to make external services interoperable with the EPOS ecosystem **without enforcing any data standard**. It acts as a bridge for integrating services that provide payloads in alternative or proprietary formats by converting them into a format the GUI can handle.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+---
 
+### Architecture
+
+The Converter system is composed of two microservices:
+
+- **converter-routine**
+- **converter-service**
+  These services work together to manage plugin lifecycle, execution, and integration with the broader EPOS system.
+
+---
+
+### converter-routine
+
+The `converter-routine` service is focused on plugin provisioning. It ensures that plugin code is available and up-to-date in the execution environment by interacting with remote Git repositories. It adheres to the microservice principle of single responsibility and performs the following tasks:
+
+- **Plugin Retrieval and Sync**:
+  Every 5 minutes, a scheduled cron job iterates through the list of registered plugins. For each plugin:
+  - If the plugin is not already present, it is cloned from its Git repository.
+  - If it is already present, a `git pull` operation is performed to update it.
+  - For Python plugins, dependencies are resolved and installed based on a `requirements.txt` file.
+- **Versioning Support**:
+  The routine supports two Git versioning strategies:
+  - **Branch**: The plugin version is interpreted as a branch name.
+  - **Tag**: The version corresponds to a Git tag.
+- **Supported Plugin Types**:
+  - **Java/Kotlin**: Precompiled JAR files.
+  - **Python**: Source files with a `requirements.txt` if needed.
+  - **Binary**: Any self-contained executable compiled for Linux x86.
+- **Exposed APIs**:
+  The converter-routine provides endpoints for plugin management at the file system level:
+  - Clean
+  - Reinstall
+  - Sync
+
+---
+
+### converter-service
+
+The `converter-service` handles the actual execution of conversion plugins when triggered by a request to an external service. It integrates with a RabbitMQ message queue to process conversion tasks asynchronously.
+
+- **Workflow**:
+  1. The `external access service` receives a request that requires payload conversion.
+  2. The service fetches the original payload and publishes a message to RabbitMQ, including the payload and the ID of the plugin to be used.
+  3. The `converter-service` consumes the message, invokes the appropriate plugin on the payload, and sends the converted result back to the access service via RabbitMQ.
+- **Plugin Execution Interface**:
+  - Each plugin must be executable from the command line and conform to a simple interface.
+  - The service invokes the plugin with the following arguments:
+    1. **Custom arguments**: As defined in the plugin's metadata (e.g., main class for Java).
+    2. **Input file path**: Path to a file containing the original payload.
+    3. **Output file path**: Path where the plugin must write the converted result.
+       Example execution:
+  ```bash
+  ./my-plugin --main-class MyClass input.json output.json
+  ```
+- **Temporary File Handling**:
+  The service is responsible for creating the input file and cleaning it up post-execution. Plugins should only read from the input file and write the result to the output file path provided creating it if it does not exist.
+- **Exposed APIs**:
+  The converter-service also exposes a set of administrative APIs to:
+  - Perform CRUD operations on plugins.
+  - Manage plugin-to-distribution relationships.
+  - These APIs are currently used manually but are fully compatible with future backoffice integration.
+
+---
+
+### Plugin Management
+
+Plugins are described via a metadata model and stored in a centralized plugin catalogue as a separate schema in the main `metadata-database`. The following API can be used to register a new plugin:
+
+```json
+{
+  "arguments": "string", // Custom execution arguments (excluding input/output paths)
+  "description": "string", // Plugin description
+  "enabled": true, // Whether the plugin is active
+  "executable": "string", // Entry point: JAR file, Python main script, or binary name
+  "name": "string", // Plugin name
+  "repository": "string", // Git URL hosting the plugin
+  "runtime": "binary", // One of: 'java', 'python', 'binary'
+  "version_type": "branch", // 'branch' or 'tag'
+  "version": "string" // Git branch or tag name
+}
 ```
-cd existing_repo
-git remote add origin https://epos-ci.brgm.fr/epos/converter-stack/converter-service.git
-git branch -M main
-git push -uf origin main
+
+Once a plugin is registered, it can be associated with one or more **distributions** (a web service) using the following relation model:
+
+```json
+{
+  "input_format": "string", // MIME type of the original payload
+  "output_format": "string", // MIME type of the converted payload
+  "plugin_id": "string", // Plugin ID from the catalogue
+  "relation_id": "string" // Distribution instance ID
+}
 ```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://epos-ci.brgm.fr/epos/converter-stack/converter-service/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
