@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/epos-eu/converter-service/dao/model"
+	"gorm.io/gorm/clause"
 )
 
 func GetPlugins() ([]model.Plugin, error) {
@@ -132,17 +133,33 @@ func DeletePlugin(id string) (plugin model.Plugin, err error) {
 	return plugin, nil
 }
 
+// CreatePlugin creates a new plugin in the db. If the plugin already exists nothing is done
 func CreatePlugin(plugin model.Plugin) (model.Plugin, error) {
 	db, err := Connect()
 	if err != nil {
 		return plugin, err
 	}
 
-	err = db.Create(&plugin).Error
-	if err != nil {
-		return plugin, err
+	res := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&plugin)
+	if res.Error != nil {
+		return plugin, res.Error
 	}
 
+	if res.RowsAffected == 0 {
+		// reset the id so that gorm doesn't include it in the where
+		plugin.ID = ""
+		var existing model.Plugin
+		err := db.
+			Where(&plugin).
+			First(&existing).
+			Error
+		if err != nil {
+			return plugin, err
+		}
+		return existing, nil
+	}
+
+	// newly inserted
 	return plugin, nil
 }
 
