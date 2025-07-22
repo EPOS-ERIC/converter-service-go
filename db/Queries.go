@@ -133,7 +133,8 @@ func DeletePlugin(id string) (plugin model.Plugin, err error) {
 	return plugin, nil
 }
 
-// CreatePlugin creates a new plugin in the db. If the plugin already exists nothing is done
+// CreatePlugin creates a new plugin in the db.
+// If the plugin already exists nothing is done  and the original one is returned
 func CreatePlugin(plugin model.Plugin) (model.Plugin, error) {
 	db, err := Connect()
 	if err != nil {
@@ -200,15 +201,31 @@ func DeletePluginRelation(id string) (relation model.PluginRelation, err error) 
 	return relation, nil
 }
 
+// CreatePluginRelation creates a new plugin relation in the db.
+// If the relation already exists nothing is done and the original one is returned
 func CreatePluginRelation(relation model.PluginRelation) (model.PluginRelation, error) {
 	db, err := Connect()
 	if err != nil {
 		return relation, err
 	}
 
-	err = db.Create(&relation).Error
-	if err != nil {
-		return relation, err
+	res := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&relation)
+	if res.Error != nil {
+		return relation, res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		// reset the id so that gorm doesn't include it in the where
+		relation.ID = ""
+		var existing model.PluginRelation
+		err := db.
+			Where(&relation).
+			First(&existing).
+			Error
+		if err != nil {
+			return relation, err
+		}
+		return existing, nil
 	}
 
 	return relation, nil
