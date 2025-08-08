@@ -3,22 +3,22 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/epos-eu/converter-service/db"
-	"github.com/epos-eu/converter-service/loggers"
+	"github.com/epos-eu/converter-service/logging"
 )
 
-var logger = loggers.EA_LOGGER
+var log = logging.Get("default")
 
 func ExternalAccessHandler(bytes []byte) ([]byte, error) {
 	body := string(bytes)
 
 	var message Message
 
-	logger.Debug("Handling message", "message", body)
+	log.Debug("Handling message", "message", body)
 
 	if err := json.Unmarshal([]byte(body), &message); err != nil {
 		return nil, fmt.Errorf("error converting payload: %v", err)
@@ -38,7 +38,14 @@ func ExternalAccessHandler(bytes []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error getting plugins: %v", err)
 	}
 
-	log.Printf("Executing plugin: %+v", plugin)
+	log.Info("executing plugin",
+		slog.Group("plugin",
+			"id", plugin.ID,
+			"name", plugin.Name,
+			"version", plugin.Version,
+			"version type", plugin.VersionType,
+			"runtime", plugin.Runtime,
+			"arguments", plugin.Arguments))
 
 	switch plugin.Runtime {
 	case "java":
@@ -63,7 +70,7 @@ func ExternalAccessHandler(bytes []byte) ([]byte, error) {
 
 		return executeCommand(message.Payload, cmd)
 	default:
-		log.Printf("error: unknown runtime: %v", plugin.Runtime)
+		log.Error("unknown runtime", "plugin runtime", plugin.Runtime)
 		response, err := json.Marshal("{}")
 		if err != nil {
 			return nil, fmt.Errorf("error on creating json: %v", err)

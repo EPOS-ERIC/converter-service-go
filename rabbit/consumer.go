@@ -33,19 +33,19 @@ func (b *BrokerConfig) handleMessages(
 	// goroutines at the same time because we set qos for the channel
 	for d := range msgs {
 		go func(delivery amqp.Delivery) {
-			logger.Info("message received", "exchange", exchangeName, "queue", queue.Name)
+			log.Info("message received", "exchange", exchangeName, "queue", queue.Name)
 
 			resp, err := handler(delivery.Body)
 			if err != nil {
-				logger.Error("handler failed", "error", err)
+				log.Error("handler failed", "error", err)
 				err = delivery.Nack(false, false) // don't re‑queue for retry
 				if err != nil {
-					logger.Error("error nack-ing", "error", err)
+					log.Error("error nack-ing", "error", err)
 				}
 				return
 			}
 
-			logger.Debug("message handled successfully")
+			log.Debug("message handled successfully")
 
 			rk := buildRoutingKey(delivery.RoutingKey, routingKeySuffix)
 			err = b.publishChan.Publish(
@@ -61,22 +61,22 @@ func (b *BrokerConfig) handleMessages(
 				},
 			)
 			if err != nil {
-				logger.Error("publish failed", "error", err)
+				log.Error("publish failed", "error", err)
 				err = delivery.Nack(false, false) // don't re‑queue for retry
 				if err != nil {
-					logger.Error("error nack-ing", "error", err)
+					log.Error("error nack-ing", "error", err)
 				}
 				return
 			}
 
-			logger.Debug("message sent successfully")
+			log.Debug("message sent successfully")
 
 			if err = delivery.Ack(false); err != nil {
-				logger.Error("ack failed", "error", err)
+				log.Error("ack failed", "error", err)
 				return
 			}
 
-			logger.Debug("message acknowledged successfully")
+			log.Debug("message acknowledged successfully")
 		}(d)
 	}
 }

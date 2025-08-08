@@ -29,22 +29,22 @@ type HTTPError struct {
 //	@Failure		500	{object}	HTTPError
 //	@Router			/plugins [get]
 func GetAllPlugins(c *gin.Context) {
-	logger.Debug("GetAllPlugins request received")
+	log.Debug("GetAllPlugins request received")
 
 	plugins, err := db.GetPlugins()
 	if err != nil {
-		logger.Error("Failed to get plugins from DB", "error", err)
+		log.Error("Failed to get plugins from DB", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plugins"})
 		return
 	}
 
 	if len(plugins) == 0 {
-		logger.Warn("No plugins found in DB")
+		log.Warn("No plugins found in DB")
 		c.JSON(http.StatusNotFound, gin.H{"error": "No plugins found"})
 		return
 	}
 
-	logger.Debug("GetAllPlugins request successful", "count", len(plugins))
+	log.Debug("GetAllPlugins request successful", "count", len(plugins))
 	c.JSON(http.StatusOK, plugins)
 }
 
@@ -61,21 +61,21 @@ func GetAllPlugins(c *gin.Context) {
 //	@Router			/plugins/{plugin_id} [get]
 func GetPlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
-	logger.Debug("GetPlugin request received", "plugin_id", id)
+	log.Debug("GetPlugin request received", "plugin_id", id)
 
 	plugin, err := db.GetPluginById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			logger.Warn("Plugin not found in DB", "plugin_id", id)
+			log.Warn("Plugin not found in DB", "plugin_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin found with plugin_id: " + id})
 			return
 		}
-		logger.Error("Failed to get plugin from DB", "plugin_id", id, "error", err)
+		log.Error("Failed to get plugin from DB", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plugin"})
 		return
 	}
 
-	logger.Debug("GetPlugin request successful", "plugin_id", id)
+	log.Debug("GetPlugin request successful", "plugin_id", id)
 	c.JSON(http.StatusOK, plugin)
 }
 
@@ -108,11 +108,11 @@ type Plugin struct {
 //	@Router			/plugins/{plugin_id} [put]
 func UpdatePlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
-	logger.Debug("UpdatePlugin request received", "plugin_id", id)
+	log.Debug("UpdatePlugin request received", "plugin_id", id)
 
 	var pluginUpdate Plugin
 	if err := c.ShouldBindJSON(&pluginUpdate); err != nil {
-		logger.Warn("Failed to bind JSON for plugin update", "plugin_id", id, "error", err)
+		log.Warn("Failed to bind JSON for plugin update", "plugin_id", id, "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
 		return
 	}
@@ -121,11 +121,11 @@ func UpdatePlugin(c *gin.Context) {
 	plugin, err := db.GetPluginById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			logger.Warn("Plugin to update not found in DB", "plugin_id", id)
+			log.Warn("Plugin to update not found in DB", "plugin_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "No plugin found with plugin_id: " + id})
 			return
 		}
-		logger.Error("Failed to get plugin for update", "plugin_id", id, "error", err)
+		log.Error("Failed to get plugin for update", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve existing plugin"})
 		return
 	}
@@ -133,28 +133,28 @@ func UpdatePlugin(c *gin.Context) {
 	// merge the two to make a new complete plugin with the new updates
 	updatedPlugin := mergePluginUpdate(pluginUpdate, plugin)
 	if err = updatedPlugin.Validate(); err != nil {
-		logger.Warn("Plugin validation failed on update", "plugin_id", id, "error", err)
+		log.Warn("Plugin validation failed on update", "plugin_id", id, "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
 		return
 	}
 
 	// update the plugin in the db
 	if err := db.UpdatePlugin(updatedPlugin); err != nil {
-		logger.Error("Failed to update plugin in DB", "plugin_id", id, "error", err)
+		log.Error("Failed to update plugin in DB", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin update"})
 		return
 	}
 
-	logger.Debug("Plugin DB record updated successfully", "plugin_id", updatedPlugin.ID)
+	log.Debug("Plugin DB record updated successfully", "plugin_id", updatedPlugin.ID)
 
 	// clean and sync if necessary
 	needsSync := pluginUpdate.Version != nil || pluginUpdate.VersionType != nil || pluginUpdate.Repository != nil
 	if needsSync && updatedPlugin.Installed {
-		logger.Debug("Plugin update requires clean/sync", "plugin_id", updatedPlugin.ID)
+		log.Debug("Plugin update requires clean/sync", "plugin_id", updatedPlugin.ID)
 		err := routine.Clean(updatedPlugin.ID)
 		if err != nil {
 			// Plugin updated successfully, but failed during post-update clean step
-			logger.Error("Post-update clean step failed", "plugin_id", updatedPlugin.ID, "error", err)
+			log.Error("Post-update clean step failed", "plugin_id", updatedPlugin.ID, "error", err)
 			c.JSON(http.StatusAccepted, updatedPlugin)
 			return
 		}
@@ -162,14 +162,14 @@ func UpdatePlugin(c *gin.Context) {
 		err = routine.SyncPlugin(updatedPlugin.ID)
 		if err != nil {
 			// Plugin updated successfully, but failed during post-update sync step
-			logger.Warn("Post-update sync step failed", "plugin_id", updatedPlugin.ID, "error", err)
+			log.Warn("Post-update sync step failed", "plugin_id", updatedPlugin.ID, "error", err)
 			c.JSON(http.StatusAccepted, updatedPlugin)
 			return
 		}
-		logger.Debug("Post-update clean and sync successful", "plugin_id", updatedPlugin.ID)
+		log.Debug("Post-update clean and sync successful", "plugin_id", updatedPlugin.ID)
 	}
 
-	logger.Info("Plugin updated successfully", "plugin_id", updatedPlugin.ID, "sync_required", needsSync)
+	log.Info("Plugin updated successfully", "plugin_id", updatedPlugin.ID, "sync_required", needsSync)
 	c.JSON(http.StatusOK, updatedPlugin)
 }
 
@@ -186,17 +186,17 @@ func UpdatePlugin(c *gin.Context) {
 //	@Router			/plugins/{plugin_id} [delete]
 func DeletePlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
-	logger.Debug("DeletePlugin request received", "plugin_id", id)
+	log.Debug("DeletePlugin request received", "plugin_id", id)
 
 	// Delete the plugin from the database
 	deletedPlugin, err := db.DeletePlugin(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			logger.Warn("Plugin to delete not found in DB", "plugin_id", id)
+			log.Warn("Plugin to delete not found in DB", "plugin_id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plugin not found"})
 			return
 		}
-		logger.Error("Failed to delete plugin from DB", "plugin_id", id, "error", err)
+		log.Error("Failed to delete plugin from DB", "plugin_id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete plugin from database"})
 		return
 	}
@@ -204,7 +204,7 @@ func DeletePlugin(c *gin.Context) {
 	// NOTE: see if this is ok or if it is better to clean manually
 	// the plugin dir will be deleted by the cron task automatically
 
-	logger.Info("Plugin deleted successfully", "plugin_id", deletedPlugin.ID)
+	log.Info("Plugin deleted successfully", "plugin_id", deletedPlugin.ID)
 	c.JSON(http.StatusOK, deletedPlugin)
 }
 
@@ -222,11 +222,11 @@ func DeletePlugin(c *gin.Context) {
 //	@Failure		500		{object}	HTTPError
 //	@Router			/plugins [post]
 func CreatePlugin(c *gin.Context) {
-	logger.Debug("CreatePlugin request received")
+	log.Debug("CreatePlugin request received")
 
 	var newPlugin Plugin
 	if err := c.ShouldBindJSON(&newPlugin); err != nil {
-		logger.Warn("Failed to bind JSON for plugin creation", "error", err)
+		log.Warn("Failed to bind JSON for plugin creation", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
 		return
 	}
@@ -238,7 +238,7 @@ func CreatePlugin(c *gin.Context) {
 	})
 
 	if err := pluginToCreate.Validate(); err != nil {
-		logger.Warn("Plugin validation failed on create", "error", err)
+		log.Warn("Plugin validation failed on create", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
 		return
 	}
@@ -246,7 +246,7 @@ func CreatePlugin(c *gin.Context) {
 	// Create in DB
 	createdPlugin, err := db.CreatePlugin(pluginToCreate)
 	if err != nil {
-		logger.Error("Failed to create plugin in DB", "error", err)
+		log.Error("Failed to create plugin in DB", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save new plugin"})
 		return
 	}
@@ -255,13 +255,13 @@ func CreatePlugin(c *gin.Context) {
 	err = routine.SyncPlugin(createdPlugin.ID)
 	if err != nil {
 		// handle the sync error
-		logger.Warn("Initial SyncPlugin failed after DB creation. Will rely on cron task.", "plugin_id", createdPlugin.ID, "error", err)
+		log.Warn("Initial SyncPlugin failed after DB creation. Will rely on cron task.", "plugin_id", createdPlugin.ID, "error", err)
 		// sending accepted to say that the request was accepted but the installation is not complete
 		c.JSON(http.StatusAccepted, createdPlugin)
 		return
 	}
 
-	logger.Info("Plugin created successfully", "plugin_id", createdPlugin.ID)
+	log.Info("Plugin created successfully", "plugin_id", createdPlugin.ID)
 	c.JSON(http.StatusCreated, createdPlugin)
 }
 

@@ -77,7 +77,7 @@ func createTempFiles(dir, payload string) (string, string, string, error) {
 func cleanupTempFiles(files ...string) {
 	for _, file := range files {
 		if err := os.RemoveAll(file); err != nil {
-			logger.Error("error removing temp dir", "error", err)
+			log.Error("error removing temp dir", "error", err)
 		}
 	}
 }

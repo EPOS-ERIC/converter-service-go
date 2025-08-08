@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/epos-eu/converter-service/loggers"
+	"github.com/epos-eu/converter-service/logging"
 )
 
-var logger = loggers.API_LOGGER
+var log = logging.Get("routes")
