@@ -36,7 +36,7 @@ const (
 )
 
 func init() {
-	maxMessages = envInt("MAX_MESSAGES", 100)
+	maxMessages = envInt("MAX_MESSAGES", 1)
 	maxReconnectAttempts = envInt("MAX_RECONNECT_ATTEMPTS", 10)
 }
 
@@ -109,7 +109,7 @@ func (b *BrokerConfig) Restart() error {
 	return b.Start()
 }
 
-// starts the broker connection to the server and starts the message listening/handling
+// Start starts the broker connection to the server and starts the message listening/handling
 func (b *BrokerConfig) Start() error {
 	logger.Info("starting broker connection")
 	err := b.dial()
@@ -222,7 +222,7 @@ func env(k, def string) string {
 }
 
 func envInt(key string, defaultVal int) int {
-	strVal := env(key, "")
+	strVal := env(key, strconv.FormatInt(int64(defaultVal), 10))
 	if strVal == "" {
 		logger.Debug("environment variable not set, using default", "name", key, "default", defaultVal)
 		return defaultVal
@@ -244,7 +244,7 @@ func failOnError(err error, msg string) {
 	}
 }
 
-// start monitoring a broker config for connection closing. If it happens, it will create a new connection and start it.
+// Monitor start monitoring a broker config for connection closing. If it happens, it will create a new connection and start it.
 func (b *BrokerConfig) Monitor(ctx context.Context) {
 	logger.Info("starting connection monitor")
 	for {

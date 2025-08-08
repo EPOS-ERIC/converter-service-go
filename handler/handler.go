@@ -29,11 +29,11 @@ func ExternalAccessHandler(bytes []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error getting the payload: the payload is empty")
 	}
 	// both the distributionId and the pluginId must be specified
-	if message.Parameters.DistributionId == "" || message.Parameters.PluginId == "" {
-		return nil, fmt.Errorf("error: both the distributionId and the pluginId must be specified. distributionId: %s. pluginId: %s", message.Parameters.DistributionId, message.Parameters.PluginId)
+	if message.Parameters.DistributionID == "" || message.Parameters.PluginID == "" {
+		return nil, fmt.Errorf("error: both the distributionId and the pluginId must be specified. distributionId: %s. pluginId: %s", message.Parameters.DistributionID, message.Parameters.PluginID)
 	}
 
-	plugin, err := db.GetPluginById(message.Parameters.PluginId)
+	plugin, err := db.GetPluginById(message.Parameters.PluginID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting plugins: %v", err)
 	}

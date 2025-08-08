@@ -1,7 +1,10 @@
 package rabbit
 
 import (
+	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -12,9 +15,12 @@ func (b *BrokerConfig) handleMessages(
 	routingKeySuffix string,
 	handler func([]byte) ([]byte, error),
 ) {
+	hostname, _ := os.Hostname()
+	consumerTag := fmt.Sprintf("%s-%s-%d", queue.Name, hostname, time.Now().Unix())
+
 	msgs, err := b.consumeChan.Consume(
 		queue.Name,
-		"",
+		consumerTag,
 		false,
 		false,
 		false,

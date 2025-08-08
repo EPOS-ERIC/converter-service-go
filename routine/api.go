@@ -56,22 +56,3 @@ func SyncPlugin(id string) error {
 
 	return nil
 }
-
-func Sync() error {
-	path, err := url.JoinPath(endpoint, "sync")
-	if err != nil {
-		return fmt.Errorf("error constructing sync URL: %w", err)
-	}
-
-	resp, err := http.Post(path, "application/json", bytes.NewBuffer([]byte{}))
-	if err != nil {
-		return fmt.Errorf("error performing GET request to %s: %w", path, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("error calling sync endpoint %s: received status code %d", path, resp.StatusCode)
-	}
-
-	return nil
-}

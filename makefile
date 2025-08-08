@@ -1,4 +1,4 @@
-IMAGE_NAME ?= converter-service-go-refactoring
+IMAGE_NAME ?= converter-service-go
 
 .PHONY:
 build-docker: build-go
