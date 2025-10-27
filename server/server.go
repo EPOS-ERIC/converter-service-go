@@ -2,7 +2,6 @@ package server
 
 import (
 	_ "embed"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -125,7 +124,7 @@ func StartServer(broker *rabbit.BrokerConfig) {
 		healthHandler := routes.HealthHandler{
 			RabbitConn: broker.Conn,
 		}
-		v1.GET("/actuator/health", gin.LoggerWithWriter(io.Discard), healthHandler.Health)
+		v1.GET("/actuator/health", healthHandler.Health)
 
 		v1.GET("/api-docs", func(c *gin.Context) {
 			c.Data(http.StatusOK, "application/json", openAPISpec)
