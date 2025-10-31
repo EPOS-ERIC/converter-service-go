@@ -26,17 +26,21 @@ func (h *HealthHandler) Health(c *gin.Context) {
 }
 
 func health(rabbitConn *amqp.Connection) error {
-	// Check the rabbit connection
 	_, err := rabbitConn.Channel()
 	if err != nil {
-		// Unhealthy: rabbit not connected
 		return fmt.Errorf("rabbit not connected")
 	}
 
-	// Check the connection to the db
-	_, err = db.Connect()
+	db := db.Get()
+
+	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("can't connect to database")
+		return fmt.Errorf("can't get underlying sql.DB: %w", err)
+	}
+
+	err = sqlDB.Ping()
+	if err != nil {
+		return fmt.Errorf("can't ping database: %w", err)
 	}
 
 	return nil

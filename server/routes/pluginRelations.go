@@ -56,7 +56,7 @@ func GetPluginRelation(c *gin.Context) {
 	id := c.Param("relation_id")
 	log.Debug("GetPluginRelation request received", "relation_id", id)
 
-	plugin, err := db.GetPluginRelationById(id)
+	plugin, err := db.GetPluginRelationByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn("Plugin relation not found in DB", "relation_id", id)
@@ -105,7 +105,7 @@ func UpdatePluginRelation(c *gin.Context) {
 	}
 
 	// get current relation
-	relation, err := db.GetPluginRelationById(id)
+	relation, err := db.GetPluginRelationByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn("Plugin relation to update not found in DB", "relation_id", id)

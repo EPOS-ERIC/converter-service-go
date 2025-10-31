@@ -6,14 +6,18 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/epos-eu/converter-service/db"
 	"github.com/epos-eu/converter-service/rabbit"
 	"github.com/epos-eu/converter-service/server"
 )
 
 func main() {
-	// context to handle shutdown gracefully
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	if err := db.Init(); err != nil {
+		panic("failed to connect to database: " + err.Error())
+	}
 
 	broker := rabbit.NewBroker()
 	// start the broker handling
@@ -24,6 +28,5 @@ func main() {
 	// start to monitor the connection and automatically restart it (in place)
 	go broker.Monitor(ctx)
 
-	// start the server (blocking)
 	server.StartServer(broker)
 }

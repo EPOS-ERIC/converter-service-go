@@ -63,7 +63,7 @@ func GetPlugin(c *gin.Context) {
 	id := c.Param("plugin_id")
 	log.Debug("GetPlugin request received", "plugin_id", id)
 
-	plugin, err := db.GetPluginById(id)
+	plugin, err := db.GetPluginByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn("Plugin not found in DB", "plugin_id", id)
@@ -118,7 +118,7 @@ func UpdatePlugin(c *gin.Context) {
 	}
 
 	// get the current version of this plugin
-	plugin, err := db.GetPluginById(id)
+	plugin, err := db.GetPluginByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn("Plugin to update not found in DB", "plugin_id", id)

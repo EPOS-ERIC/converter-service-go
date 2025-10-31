@@ -33,7 +33,7 @@ func ExternalAccessHandler(bytes []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error: both the distributionId and the pluginId must be specified. distributionId: %s. pluginId: %s", message.Parameters.DistributionID, message.Parameters.PluginID)
 	}
 
-	plugin, err := db.GetPluginById(message.Parameters.PluginID)
+	plugin, err := db.GetPluginByID(message.Parameters.PluginID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting plugins: %v", err)
 	}
