@@ -122,7 +122,7 @@ func StartServer(broker *rabbit.BrokerConfig) {
 
 		// Health check
 		healthHandler := routes.HealthHandler{
-			RabbitConn: broker.Conn,
+			Broker: broker,
 		}
 		v1.GET("/actuator/health", healthHandler.Health)
 

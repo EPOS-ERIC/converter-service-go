@@ -5,19 +5,23 @@ import (
 	"net/http"
 
 	"github.com/epos-eu/converter-service/db"
+	"github.com/epos-eu/converter-service/logging"
+	"github.com/epos-eu/converter-service/rabbit"
 	"github.com/gin-gonic/gin"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+var healthLog = logging.Get("health")
+
 type HealthHandler struct {
-	RabbitConn *amqp.Connection
+	Broker *rabbit.BrokerConfig
 }
 
 // Health check
 func (h *HealthHandler) Health(c *gin.Context) {
-	err := health(h.RabbitConn)
+	err := health(h.Broker)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Unhealthy: ", err.Error())
+		healthLog.Error("health check failed", "error", err)
+		c.String(http.StatusServiceUnavailable, "Unhealthy: ", err.Error())
 		return
 	} else {
 		c.String(http.StatusOK, "Healthy")
@@ -25,8 +29,8 @@ func (h *HealthHandler) Health(c *gin.Context) {
 	}
 }
 
-func health(rabbitConn *amqp.Connection) error {
-	_, err := rabbitConn.Channel()
+func health(broker *rabbit.BrokerConfig) error {
+	_, err := broker.Conn.Channel()
 	if err != nil {
 		return fmt.Errorf("rabbit not connected")
 	}
