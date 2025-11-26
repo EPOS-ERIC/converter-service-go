@@ -30,9 +30,13 @@ func (h *HealthHandler) Health(c *gin.Context) {
 }
 
 func health(broker *rabbit.BrokerConfig) error {
-	_, err := broker.Conn.Channel()
+	ch, err := broker.Conn.Channel()
 	if err != nil {
-		return fmt.Errorf("rabbit not connected")
+		return fmt.Errorf("can't open rabbit channel: %w", err)
+	}
+	err = ch.Close()
+	if err != nil {
+		return fmt.Errorf("can't close rabbit channel: %w", err)
 	}
 
 	db := db.Get()
