@@ -59,7 +59,7 @@ func createTempFiles(dir, payload string) (string, string, string, error) {
 		return "", "", "", err
 	}
 	// create a temp dir with the unique name
-	err = os.Mkdir(tmpDir, os.ModeTemporary)
+	err = os.Mkdir(tmpDir, 0o750)
 	if err != nil {
 		return "", "", "", err
 	}
