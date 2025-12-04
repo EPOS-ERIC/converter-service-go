@@ -11,6 +11,8 @@ WORKDIR /opt/converter
 
 COPY converter-service converter-service
 
+RUN mkdir /opt/converter/plugins
+
 RUN chown -R appuser:appgroup /opt/converter
 
 USER appuser:appgroup
