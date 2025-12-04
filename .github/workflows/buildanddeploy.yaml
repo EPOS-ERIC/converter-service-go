@@ -100,6 +100,12 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Generate OpenAPI spec
+        run: |
+          # Option A: If using swag (Swagger)
+          go install github.com/swaggo/swag/cmd/swag@latest
+          swag init -o ./server --outputTypes json
+
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
 
