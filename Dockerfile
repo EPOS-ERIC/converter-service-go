@@ -1,35 +1,17 @@
-# Stage 1: Build
 FROM golang:1.25-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates tzdata
-
-WORKDIR /app
-
-# Cache dependencies
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Build
+WORKDIR /build
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-    -ldflags="-s -w" \
-    -o /app/bin/server ./...
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o converter-service ./cmd/main.go
 
-# Stage 2: Runtime
-FROM scratch
+FROM alpine:3.20
 
-LABEL org.opencontainers.image.source="https://github.com/your-org/your-repo"
+RUN apk --no-cache add openjdk21 python3
 
-# Copy CA certs for HTTPS
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+LABEL authors="valeriovinciarelli"
 
-# Copy binary
-COPY --from=builder /app/bin/server /server
+WORKDIR /opt/converter
 
-# Non-root user (numeric for scratch)
-USER 1001:1001
+COPY --from=builder /build/converter-service converter-service
 
-EXPOSE 8080
-
-ENTRYPOINT ["/server"]
+CMD ["./converter-service"]
