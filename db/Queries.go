@@ -55,6 +55,20 @@ func GetPluginRelationByID(id string) (model.PluginRelation, error) {
 	return plugin, nil
 }
 
+func GetPluginRelationsByRelationID(relationID string) ([]model.PluginRelation, error) {
+	db := Get()
+
+	var relations []model.PluginRelation
+	err := db.
+		Joins("JOIN converter_catalogue.plugin ON converter_catalogue.plugin.id = converter_catalogue.plugin_relations.plugin_id").
+		Where("converter_catalogue.plugin_relations.relation_id = ?", relationID).
+		Find(&relations).Error
+	if err != nil {
+		return nil, err
+	}
+	return relations, nil
+}
+
 func GetPluginByID(pluginID string) (model.Plugin, error) {
 	var plugin model.Plugin
 	db := Get()

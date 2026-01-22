@@ -116,6 +116,9 @@ func StartServer(broker *rabbit.BrokerConfig) {
 		v1.PUT("/plugin-relations/:relation_id", routes.UpdatePluginRelation)
 		v1.DELETE("/plugin-relations/:relation_id", routes.DeletePluginRelation)
 
+		// Distribution endpoints
+		v1.GET("/distributions/:instance_id", routes.GetDistributionByInstanceID)
+
 		// Enable and disable plugins
 		v1.POST("/plugins/:plugin_id/enable", routes.EnablePlugin)
 		v1.POST("/plugins/:plugin_id/disable", routes.DisablePlugin)

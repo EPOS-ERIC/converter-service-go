@@ -11,6 +11,16 @@ import (
 	"gorm.io/gorm"
 )
 
+type DistributionInfo struct {
+	InstanceID string                      `json:"instance_id"`
+	Relations  []PluginWithRelationDetails `json:"relations"`
+}
+
+type PluginWithRelationDetails struct {
+	Plugin   model.Plugin         `json:"plugin"`
+	Relation model.PluginRelation `json:"relation"`
+}
+
 // GetAllPluginRelations retrieves all plugin relations from the database
 //
 //	@Summary		Get all plugin relations
@@ -218,6 +228,49 @@ func CreatePluginRelation(c *gin.Context) {
 
 	log.Info("Plugin relation created successfully", "relation_id", createdRelation.ID)
 	c.JSON(http.StatusCreated, createdRelation)
+}
+
+// GetDistributionByInstanceID retrieves all plugins and their relations for a given distribution instance ID
+//
+//	@Summary		Get distribution by instance ID
+//	@Description	Retrieve all plugins and their relations for a specific distribution instance
+//	@Tags			Converter Service
+//	@Produce		json
+//	@Param			instance_id	path		string	true	"Distribution Instance ID"
+//	@Success		200			{object}	DistributionInfo
+//	@Failure		500			{object}	HTTPError
+//	@Router			/distributions/{instance_id} [get]
+func GetDistributionByInstanceID(c *gin.Context) {
+	instanceID := c.Param("instance_id")
+	log.Debug("GetDistributionByInstanceID request received", "instance_id", instanceID)
+
+	relations, err := db.GetPluginRelationsByRelationID(instanceID)
+	if err != nil {
+		log.Error("Failed to get plugin relations from DB", "instance_id", instanceID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve distribution"})
+		return
+	}
+
+	distributionInfo := DistributionInfo{
+		InstanceID: instanceID,
+		Relations:  make([]PluginWithRelationDetails, 0),
+	}
+
+	for _, rel := range relations {
+		plugin, err := db.GetPluginByID(rel.PluginID)
+		if err != nil {
+			log.Warn("Plugin not found for relation", "plugin_id", rel.PluginID, "relation_id", rel.ID)
+			continue
+		}
+
+		distributionInfo.Relations = append(distributionInfo.Relations, PluginWithRelationDetails{
+			Plugin:   plugin,
+			Relation: rel,
+		})
+	}
+
+	log.Debug("GetDistributionByInstanceID request successful", "instance_id", instanceID, "count", len(distributionInfo.Relations))
+	c.JSON(http.StatusOK, distributionInfo)
 }
 
 // mergePluginRelationUpdate takes the update payload and the existing relation data,
