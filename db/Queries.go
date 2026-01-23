@@ -213,3 +213,15 @@ func CreatePluginRelation(relation model.PluginRelation) (model.PluginRelation, 
 
 	return relation, nil
 }
+
+// DeletePluginRelationsByRelationID deletes all plugin relations for a given relation ID (relationID is the distribution instanceID)
+func DeletePluginRelationsByRelationID(relationID string) (int64, error) {
+	db := Get()
+
+	result := db.Exec("DELETE FROM converter_catalogue.plugin_relations WHERE relation_id = ?", relationID)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return result.RowsAffected, nil
+}

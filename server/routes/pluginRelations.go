@@ -184,6 +184,31 @@ func DeletePluginRelation(c *gin.Context) {
 	c.JSON(http.StatusOK, deletedRelation)
 }
 
+// DeleteRelationsByDistributionID deletes all plugin relations for a given distribution instanceID
+//
+//	@Summary		Delete all relations for a distribution
+//	@Description	Delete all plugin relations associated with a specific distribution instanceID
+//	@Tags			Converter Service
+//	@Produce		json
+//	@Param			relation_id	path		string	true	"Instance ID of the Distribution"
+//	@Success		200			{object}	map[string]interface{}
+//	@Failure		500			{object}	HTTPError
+//	@Router			/plugin-relations/distribution/{relation_id} [delete]
+func DeleteRelationsByDistributionID(c *gin.Context) {
+	distributionID := c.Param("relation_id")
+	log.Debug("DeleteRelationsByDistributionID request received", "distribution_id", distributionID)
+
+	deletedCount, err := db.DeletePluginRelationsByRelationID(distributionID)
+	if err != nil {
+		log.Error("Failed to delete plugin relations from DB", "distribution_id", distributionID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete plugin relations"})
+		return
+	}
+
+	log.Info("Plugin relations deleted successfully", "distribution_id", distributionID, "count", deletedCount)
+	c.JSON(http.StatusOK, gin.H{"deleted_count": deletedCount})
+}
+
 // CreatePluginRelation creates a new plugin relation in the database
 //
 //	@Summary		Create a new plugin relation

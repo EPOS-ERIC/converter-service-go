@@ -114,6 +114,7 @@ func StartServer(broker *rabbit.BrokerConfig) {
 		v1.GET("/plugin-relations", routes.GetAllPluginRelations)
 		v1.GET("/plugin-relations/:relation_id", routes.GetPluginRelation)
 		v1.PUT("/plugin-relations/:relation_id", routes.UpdatePluginRelation)
+		v1.DELETE("/plugin-relations/distribution/:relation_id", routes.DeleteRelationsByDistributionID)
 		v1.DELETE("/plugin-relations/:relation_id", routes.DeletePluginRelation)
 
 		// Distribution endpoints
