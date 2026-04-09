@@ -113,3 +113,4 @@ Once a plugin is registered, it can be associated with one or more **distributio
   "relation_id": "string" // Distribution instance ID
 }
 ```
+
